@@ -1,0 +1,17 @@
+# Build output
+.next
+out
+build
+dist
+coverage
+
+# Dependencies and lockfiles
+node_modules
+package-lock.json
+
+# Generated
+next-env.d.ts
+
+# Managed by `next dev` (see node_modules/next/dist/server/lib/generate-agent-files.js);
+# must stay byte-identical or Next rewrites it on the next dev run.
+AGENTS.md

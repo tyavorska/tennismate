@@ -1,7 +1,5 @@
-export default function HomePage() {
-  return (
-    <main>
-      <h1>TennisMate</h1>
-    </main>
-  );
+import { HomePage } from '@/views/home';
+
+export default function Page() {
+  return <HomePage />;
 }

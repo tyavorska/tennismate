@@ -56,6 +56,10 @@
   --foreground: var(--primary-black);
   --muted: var(--secondary-black-65);
   --border: var(--secondary-black-10);
+  /* Boundaries of controls (inputs, outlined buttons, switches): 3:1 against surface. */
+  --border-strong: var(--secondary-black-65);
+  --danger: var(--secondary-red-40);
+  --focus-ring: var(--link);
   --accent: var(--primary-yellow);
   --accent-soft: var(--secondary-yellow-20);
   --accent-contrast: var(--primary-black);
@@ -89,6 +93,8 @@
   --foreground: var(--primary-white);
   --muted: var(--secondary-black-35);
   --border: var(--secondary-black-80);
+  --border-strong: var(--secondary-black-40);
+  --danger: var(--secondary-red-70);
   --accent-soft: var(--secondary-black-80);
   --link: var(--link-hover);
   --link-hover-color: var(--secondary-black-30);
@@ -108,6 +114,21 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* One focus style for every focusable element (WCAG 2.4.7, 2.4.13). */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 a:not([class]) {

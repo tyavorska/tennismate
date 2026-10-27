@@ -1,0 +1,82 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.subtitle {
+  color: var(--muted);
+}
+
+.providers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.alert {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.links {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.link {
+  display: inline-block;
+  padding: var(--space-1) 0;
+  color: var(--link);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.legal {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.legalLink {
+  display: inline-block;
+  padding: var(--space-1) 0;
+  color: inherit;
+}

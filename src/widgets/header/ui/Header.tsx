@@ -13,11 +13,8 @@ export function Header() {
           <Link href="/courts" className={styles.link}>
             Courts
           </Link>
-          <Link href="/sign-in" className={styles.link}>
+          <Link href="/sign-in" className={styles.cta}>
             Sign in
-          </Link>
-          <Link href="/sign-up" className={styles.cta}>
-            Sign up
           </Link>
           <ThemeToggle />
         </nav>

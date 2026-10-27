@@ -14,6 +14,7 @@
 }
 
 .logo {
+  padding: var(--space-1) 0;
   font-size: var(--text-lg);
   font-weight: 700;
   color: var(--foreground);
@@ -27,6 +28,8 @@
 }
 
 .link {
+  display: inline-block;
+  padding: var(--space-1) 0;
   color: inherit;
   text-decoration: none;
 }

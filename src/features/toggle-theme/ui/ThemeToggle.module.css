@@ -9,14 +9,9 @@
   cursor: pointer;
   color: var(--foreground);
   background: var(--accent-soft);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
   transition: background-color 0.3s ease;
-}
-
-.switch:focus-visible {
-  outline: 2px solid var(--link);
-  outline-offset: 2px;
 }
 
 .icon {

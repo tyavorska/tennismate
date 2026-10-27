@@ -8,7 +8,7 @@ export function CourtsPage() {
       <p className={styles.subtitle}>Browse tennis courts and find a place to play.</p>
       <div className={styles.grid}>
         {courts.map((court) => (
-          <CourtCard key={court.id} court={court} />
+          <CourtCard key={court.id} court={court} headingLevel={2} />
         ))}
       </div>
     </main>

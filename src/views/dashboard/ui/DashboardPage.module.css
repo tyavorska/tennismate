@@ -1,0 +1,14 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--page-width);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.text {
+  color: var(--muted);
+}

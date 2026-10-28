@@ -3,6 +3,6 @@ import { SignInPage } from '@/views/sign-in';
 
 export const metadata: Metadata = { title: 'Sign in | TennisMate' };
 
-export default function Page() {
-  return <SignInPage />;
+export default function Page({ searchParams }: PageProps<'/sign-in'>) {
+  return <SignInPage searchParams={searchParams} />;
 }

@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { emailSchema, passwordSchema } from '@/entities/user';
 
 export const signUpSchema = z
   .object({
-    email: z.email('Enter a valid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    email: emailSchema,
+    password: passwordSchema,
     confirmPassword: z.string().min(1, 'Confirm your password'),
   })
   .refine((values) => values.password === values.confirmPassword, {
@@ -11,7 +12,7 @@ export const signUpSchema = z
     path: ['confirmPassword'],
   });
 
-export type SignUpInput = z.infer<typeof signUpSchema>;
+export type SignUpInput = z.input<typeof signUpSchema>;
 
 export const signUpDefaults = {
   email: '',

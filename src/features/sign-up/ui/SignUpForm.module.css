@@ -45,11 +45,6 @@
   gap: var(--space-4);
 }
 
-.alert {
-  font-size: var(--text-sm);
-  color: var(--danger);
-}
-
 .links {
   display: flex;
   justify-content: space-between;

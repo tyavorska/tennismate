@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "unit-disallowed-list": [
+      ["px"],
+      { "message": "No px values. Use rem and design tokens (--space-*, --text-*, --radius*)." }
+    ]
+  }
+}

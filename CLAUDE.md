@@ -149,6 +149,9 @@ export const playerQueries = {
   no CSS-in-JS, no global class names, no inline styles except for genuinely dynamic values.
 - `app/globals.css` holds only resets and design tokens (CSS custom properties). Components
   reference tokens, never raw values.
+- No hard-coded `px` values anywhere in CSS. Use `rem` and tokens (`--space-*`, `--text-*`,
+  `--radius*`, `--border-width`, `--focus-ring-width`, `--shadow-*`). Add a token in rem when none
+  fits.
 
 ## Accessibility: WCAG 2.2 AA
 
@@ -195,15 +198,19 @@ follow-up.
 
 ## Naming
 
-| Thing                     | Convention                  | Example                                     |
-| ------------------------- | --------------------------- | ------------------------------------------- |
-| Folders, slices, segments | kebab-case                  | `features/create-match/`, `shared/ui/`      |
-| Components                | PascalCase file and export  | `MatchCard.tsx`, `MatchCard.module.css`     |
-| Hooks                     | camelCase with `use` prefix | `useMatchFilters.ts`                        |
-| Other modules             | camelCase                   | `matchQueries.ts`, `formatScore.ts`         |
-| Tests                     | same name plus `.test`      | `MatchCard.test.tsx`, `formatScore.test.ts` |
-| Next routing files        | Next's lowercase names      | `page.tsx`, `layout.tsx`, `route.ts`        |
-| Environment variables     | SCREAMING_SNAKE_CASE        | `DATABASE_URL`                              |
+A component's folder is kebab-case even when the file inside is PascalCase:
+`shared/ui/text-field/TextField.tsx`.
+
+| Thing                       | Convention                  | Example                                           |
+| --------------------------- | --------------------------- | ------------------------------------------------- |
+| Folders, slices, segments   | kebab-case, always          | `features/create-match/`, `shared/ui/text-field/` |
+| Components (incl. drawers)  | PascalCase file and export  | `MatchCard.tsx`, `FiltersDrawer.tsx`              |
+| Component styles            | same name plus `.module`    | `MatchCard.module.css`                            |
+| Hooks                       | camelCase with `use` prefix | `useMatchFilters.ts`                              |
+| Utilities and other modules | camelCase                   | `jobUtils.ts`, `date.ts`, `matchQueries.ts`       |
+| Tests                       | same name plus `.test`      | `MatchCard.test.tsx`, `date.test.ts`              |
+| Next routing files          | Next's lowercase names      | `page.tsx`, `layout.tsx`, `route.ts`              |
+| Environment variables       | SCREAMING_SNAKE_CASE        | `DATABASE_URL`                                    |
 
 ## Testing
 
@@ -216,8 +223,9 @@ follow-up.
 
 - Prettier is the single source of formatting truth (`.prettierrc`: single quotes, 100 columns,
   trailing commas, semicolons). Do not hand-format.
-- TypeScript strict. No `any` without a comment explaining why. Prefer discriminated unions for
-  state machines and `satisfies` over type assertions.
+- TypeScript strict. No escape hatches: no `as` type assertions, no `any`, no `unknown`, and no
+  non-null `!`. Narrow with type guards, discriminated unions, `satisfies`, or Zod parsing
+  instead. `as const` and import renames (`import { X as Y }`) are not assertions and are allowed.
 - Import React types by name with `import type`: `import type { ReactNode } from 'react';`,
   then `children: ReactNode`. Never use the `React.` namespace (`React.ReactNode`, `React.FC`).
 - Prefer readable, named steps over clever one-liners. Derive state instead of storing it.

@@ -1,0 +1,1 @@
+export { renderWithQuery } from './renderWithQuery';

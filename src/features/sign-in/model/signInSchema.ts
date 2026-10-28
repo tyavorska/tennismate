@@ -1,10 +1,8 @@
-import { z } from 'zod';
+import type { z } from 'zod';
+import { signInCredentialsSchema } from '@/entities/user';
 
-export const signInSchema = z.object({
-  email: z.email('Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-});
+export const signInSchema = signInCredentialsSchema;
 
-export type SignInInput = z.infer<typeof signInSchema>;
+export type SignInInput = z.input<typeof signInSchema>;
 
 export const signInDefaults = { email: '', password: '' } satisfies SignInInput;

@@ -1,33 +1,41 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from 'react-aria-components';
 import { useForm } from 'react-hook-form';
-import { Button, FormTextField } from '@/shared/ui';
+import { applyFieldErrors } from '@/shared/lib';
+import { Button, FormAlert, FormTextField } from '@/shared/ui';
 import { signInDefaults, signInSchema, type SignInInput } from '../model/signInSchema';
+import { useSignIn } from '../model/useSignIn';
 import styles from './SignInForm.module.css';
 
 type SignInFormProps = {
   /** 1 when the form is the page's main content, 2 when it sits inside a labelled dialog. */
   headingLevel?: 1 | 2;
+  returnTo?: string;
 };
 
-export function SignInForm({ headingLevel = 2 }: SignInFormProps) {
+const fields = ['email', 'password'] as const;
+
+export function SignInForm({ headingLevel = 2, returnTo }: SignInFormProps) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
-  const router = useRouter();
-  const { control, handleSubmit } = useForm<SignInInput>({
+  const signIn = useSignIn(returnTo ?? null);
+  const { control, handleSubmit, setError } = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
     defaultValues: signInDefaults,
     mode: 'onTouched',
   });
 
-  function onSubmit() {
-    // TODO: replace with a real sign-in call once auth exists. For now any valid input
-    // goes straight to the signed-in area so the layout can be worked on.
-    router.push('/home');
+  function onSubmit(values: SignInInput) {
+    if (signIn.isPending) return;
+    signIn.mutate(values, {
+      onError: (error) => applyFieldErrors(error.fieldErrors, fields, setError),
+    });
   }
+
+  const formError =
+    signIn.error !== null && signIn.error.kind !== 'validation' ? signIn.error : undefined;
 
   return (
     <div className={styles.root}>
@@ -67,7 +75,15 @@ export function SignInForm({ headingLevel = 2 }: SignInFormProps) {
           placeholder="At least 8 characters"
         />
 
-        <Button type="submit">Sign in with email</Button>
+        {formError !== undefined && (
+          <FormAlert referenceId={formError.kind === 'server' ? formError.requestId : undefined}>
+            {formError.message}
+          </FormAlert>
+        )}
+
+        <Button type="submit" isPending={signIn.isPending}>
+          {signIn.isPending ? 'Signing in…' : 'Sign in with email'}
+        </Button>
       </Form>
 
       <div className={styles.links}>

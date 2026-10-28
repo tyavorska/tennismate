@@ -1,0 +1,14 @@
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--danger);
+  border: var(--border-width) solid var(--danger);
+  border-radius: var(--radius);
+}
+
+.reference {
+  color: var(--muted);
+}

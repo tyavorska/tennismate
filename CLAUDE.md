@@ -214,20 +214,43 @@ A component's folder is kebab-case even when the file inside is PascalCase:
 
 ## Testing
 
-- Vitest with Testing Library. Tests are co-located with the code they cover.
+- Vitest with Testing Library. Tests sit next to the code they cover (`date.ts` → `date.test.ts`).
 - Shared test infrastructure (render helpers, MSW handlers, setup) lives in `shared/testing/` and
   is imported from there, not from deep paths.
 - Test behavior through a slice's public API, not its implementation details.
+- Group tests with `describe` blocks by section or behavior. Name each test as a plain-English
+  sentence that says what it checks: `it('shows an error when the passwords do not match')`.
+- Query the UI the way a user would: by role and accessible name, label, or visible text
+  (`getByRole`, `getByLabelText`, `getByText`). Use `data-testid` only when nothing else works.
 
 ## Code style
 
 - Prettier is the single source of formatting truth (`.prettierrc`: single quotes, 100 columns,
   trailing commas, semicolons). Do not hand-format.
-- TypeScript strict. No escape hatches: no `as` type assertions, no `any`, no `unknown`, and no
-  non-null `!`. Narrow with type guards, discriminated unions, `satisfies`, or Zod parsing
-  instead. `as const` and import renames (`import { X as Y }`) are not assertions and are allowed.
 - Import React types by name with `import type`: `import type { ReactNode } from 'react';`,
   then `children: ReactNode`. Never use the `React.` namespace (`React.ReactNode`, `React.FC`).
-- Prefer readable, named steps over clever one-liners. Derive state instead of storing it.
 - Commit messages follow Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`,
   `test:`).
+
+### TypeScript
+
+- Strict mode. Type function inputs and outputs explicitly, including return types.
+- No escape hatches in production code: no `as` type assertions, no `any`, no `unknown`, and no
+  non-null `!`. To narrow, use a type guard, a discriminated union, `satisfies`, Zod parsing, or
+  handle the `undefined` case. Import renames (`import { X as Y }`) are not assertions.
+- Prefer readonly types for data that should not be mutated: `readonly string[]`,
+  `ReadonlyArray<T>`, `ReadonlyMap<K, V>`, `ReadonlySet<T>`, `Readonly<T>`.
+- Use branded types for values with a specific format (an ISO date string, a player id) so they
+  cannot be mixed up with plain strings. Create them by parsing, not by asserting:
+  `const isoDateSchema = z.iso.date().brand<'IsoDate'>(); type IsoDate = z.infer<typeof isoDateSchema>;`
+- Use `as const` for lookup tables so their keys and values are typed literally, and pair it with
+  `satisfies` to check the shape: `const labels = { ... } as const satisfies Record<Surface, string>;`
+
+### Functions
+
+- Write small, pure functions that do one thing and return a value. Never mutate inputs; return a
+  new value instead.
+- Return early on invalid input so the main path stays unindented.
+- Map keys to values with a lookup table (`Record<Key, Value>`), not an `if`/`else` chain or
+  `switch`.
+- Prefer readable, named steps over clever one-liners. Derive state instead of storing it.

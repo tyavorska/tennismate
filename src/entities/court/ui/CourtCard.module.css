@@ -4,7 +4,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border);
   border-radius: var(--radius);
 }
 
@@ -28,5 +28,5 @@
   font-size: var(--text-sm);
   text-transform: capitalize;
   background: var(--accent-soft);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }

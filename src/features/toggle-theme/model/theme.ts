@@ -2,7 +2,7 @@ export type Theme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'theme';
 
-export function isTheme(value: unknown): value is Theme {
+export function isTheme(value: string | null | undefined): value is Theme {
   return value === 'light' || value === 'dark';
 }
 

@@ -14,7 +14,7 @@
   font: inherit;
   color: var(--foreground);
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  border: var(--border-width) solid var(--border-strong);
   border-radius: var(--radius);
   outline: none;
 }
@@ -30,8 +30,8 @@
 .input[data-focus-visible],
 .input[data-focused] {
   border-color: var(--focus-ring);
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: calc(-1 * var(--border-width));
 }
 
 .input[data-invalid] {

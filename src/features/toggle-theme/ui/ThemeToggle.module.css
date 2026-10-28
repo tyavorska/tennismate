@@ -9,8 +9,8 @@
   cursor: pointer;
   color: var(--foreground);
   background: var(--accent-soft);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-full);
   transition: background-color 0.3s ease;
 }
 
@@ -38,7 +38,7 @@
   height: 1.5rem;
   background: var(--accent);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

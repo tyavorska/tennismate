@@ -17,7 +17,7 @@
   overflow-y: auto;
   color: var(--foreground);
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  border-left: var(--border-width) solid var(--border);
 }
 
 .drawer[data-entering] {

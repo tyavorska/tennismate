@@ -82,6 +82,11 @@
   --text-3xl: 3rem;
 
   --radius: 0.5rem;
+  --radius-full: 50rem;
+  --border-width: 0.0625rem;
+  --focus-ring-width: 0.125rem;
+  --focus-ring-offset: 0.125rem;
+  --shadow-sm: 0 0.0625rem 0.1875rem rgb(0 0 0 / 30%);
   --page-width: 64rem;
 
   color-scheme: light;
@@ -118,8 +123,8 @@ body {
 
 /* One focus style for every focusable element (WCAG 2.4.7, 2.4.13). */
 :focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

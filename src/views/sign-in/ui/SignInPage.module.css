@@ -3,6 +3,6 @@
   margin: var(--space-8) auto;
   padding: var(--space-6);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: var(--border-width) solid var(--border);
   border-radius: var(--radius);
 }

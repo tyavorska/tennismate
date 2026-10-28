@@ -1,6 +1,6 @@
-export { Button } from './Button/Button';
-export { Drawer } from './Drawer/Drawer';
-export { InlineScript } from './InlineScript/InlineScript';
-export { FormTextField } from './TextField/FormTextField';
-export { TextField } from './TextField/TextField';
-export { VisuallyHidden } from './VisuallyHidden/VisuallyHidden';
+export { Button } from './button/Button';
+export { Drawer } from './drawer/Drawer';
+export { InlineScript } from './inline-script/InlineScript';
+export { FormTextField } from './text-field/FormTextField';
+export { TextField } from './text-field/TextField';
+export { VisuallyHidden } from './visually-hidden/VisuallyHidden';

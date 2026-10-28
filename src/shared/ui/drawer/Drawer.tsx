@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Dialog, Modal, ModalOverlay } from 'react-aria-components';
-import { Button } from '../Button/Button';
+import { Button } from '../button/Button';
 import styles from './Drawer.module.css';
 
 type DrawerProps = {

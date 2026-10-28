@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { apiFetch } from './apiFetch';
-import { ApiError } from './errors';
+import type { ApiError } from './errors';
 
 const schema = z.object({ id: z.string() });
 

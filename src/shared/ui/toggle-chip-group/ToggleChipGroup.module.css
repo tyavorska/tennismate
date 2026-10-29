@@ -1,0 +1,69 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  font: inherit;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.2s ease,
+    transform 0.12s ease;
+}
+
+.chip[data-hovered] {
+  background: var(--chip-bg);
+}
+
+.chip[data-pressed] {
+  transform: scale(0.97);
+}
+
+/* Pressed state shows a check mark too, so it never relies on color alone. */
+.chip[data-selected] {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent-contrast);
+}
+
+.chip[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.chip svg {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.check {
+  display: none;
+}
+
+.chip[data-selected] .check {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip[data-pressed] {
+    transform: none;
+  }
+}

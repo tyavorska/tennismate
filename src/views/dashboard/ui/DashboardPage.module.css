@@ -1,14 +1,139 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  max-width: var(--page-width);
+  gap: var(--space-8);
+}
+
+/* Navy band with lime type, the same in both themes. */
+.hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6) var(--space-8);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  overflow: hidden;
+  color: var(--hero-fg);
+  background: var(--hero-bg);
+  border: var(--border-width) solid var(--hero-border);
+  border-radius: var(--radius-xl);
+  isolation: isolate;
+}
+
+.court {
+  position: absolute;
+  top: 50%;
+  right: calc(-1 * var(--space-8));
+  z-index: -1;
+  width: 32rem;
+  max-width: 80%;
+  transform: translateY(-50%) rotate(-8deg);
+  fill: none;
+  stroke: var(--hero-line);
+  stroke-width: 3;
+}
+
+.courtBall {
+  fill: var(--accent);
+  stroke: none;
+  animation: bounce 2.8s ease-in-out infinite;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 40rem;
+}
+
+.kicker {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .title {
-  font-size: var(--text-2xl);
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
 }
 
-.text {
-  color: var(--muted);
+.highlight {
+  color: var(--accent);
+}
+
+.lead {
+  max-width: 34rem;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--hero-muted);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-1);
+  min-width: 7rem;
+  padding: var(--space-3) var(--space-4);
+  background: var(--hero-tile-bg);
+  border: var(--border-width) solid var(--hero-tile-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(0.25rem);
+}
+
+.stat dt {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hero-muted);
+}
+
+.stat dd {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(-3rem, -2rem);
+  }
+}
+
+@media (max-width: 40rem) {
+  .hero {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .court {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courtBall {
+    animation: none;
+  }
 }

@@ -1,72 +1,122 @@
 .shell {
-  display: grid;
-  grid-template-columns: 15rem 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
 }
 
-.sidebar {
+.header {
   position: sticky;
   top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  height: 100dvh;
-  padding: var(--space-6) var(--space-4);
+  z-index: 10;
   background: var(--surface);
-  border-right: var(--border-width) solid var(--border);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-8);
+  max-width: var(--shell-width);
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-6);
 }
 
 .logo {
-  padding: 0 var(--space-3);
-  font-size: var(--text-lg);
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--foreground);
   text-decoration: none;
+}
+
+.ball {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  transition: transform 0.4s ease;
+}
+
+.logo:hover .ball {
+  transform: rotate(-30deg);
+}
+
+.ballFace {
+  fill: var(--accent);
+  stroke: var(--accent-contrast);
+  stroke-width: 1;
+}
+
+.ballSeam {
+  fill: none;
+  stroke: var(--accent-contrast);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* Stacked, heavy italic wordmark: "TENNIS" over "MATE". */
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
 }
 
 .nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  flex: 1;
 }
 
-.bottom {
+.navList {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: auto;
-  padding: 0 var(--space-3);
-}
-
-.bottom .link {
-  margin: 0 calc(-1 * var(--space-3));
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
 }
 
 .link {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  color: var(--muted);
-  font-weight: 600;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  color: var(--foreground);
+  font-weight: 500;
   text-decoration: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  transition: background-color 0.2s ease;
 }
 
 .link:hover {
-  color: var(--foreground);
-  background: var(--accent-soft);
+  background: var(--chip-bg);
 }
 
+/* Current page: a soft neutral pill, bold text and a short bar underneath (navy in light, lime in dark). */
 .link[aria-current='page'] {
-  color: var(--accent-contrast);
-  background: var(--accent);
+  font-weight: 700;
+  background: var(--chip-bg);
+}
+
+.link[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-1);
+  left: var(--space-4);
+  height: var(--focus-ring-width);
+  background: var(--badge-bg);
+  border-radius: var(--radius-full);
 }
 
 .icon {
   display: inline-flex;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .icon svg {
@@ -74,52 +124,44 @@
   height: 100%;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.content {
-  min-width: 0;
-  padding: var(--space-8) var(--space-6);
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
 }
 
-/* Narrow screens: collapse the sidebar into an icon rail. */
-@media (max-width: 40rem) {
-  .shell {
-    grid-template-columns: 4.5rem 1fr;
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-width);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-12);
+}
+
+/* Narrow screens: the nav drops to its own row under the logo and account. */
+@media (max-width: 48rem) {
+  .bar {
+    padding: var(--space-3) var(--space-4);
   }
 
-  .sidebar {
-    align-items: center;
-    padding: var(--space-4) var(--space-2);
-  }
-
-  .logo {
-    padding: 0;
-    font-size: var(--text-sm);
-  }
-
-  .bottom {
-    align-items: center;
-    padding: 0;
-  }
-
-  .bottom .link {
-    margin: 0;
-  }
-
-  /* Visually hidden, still read by screen readers; never display: none. */
-  .label {
-    position: absolute;
-    width: var(--border-width);
-    height: var(--border-width);
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .nav {
+    flex-basis: 100%;
+    order: 3;
   }
 
   .content {
-    padding: var(--space-6) var(--space-4);
+    padding: var(--space-4) var(--space-4) var(--space-8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo:hover .ball {
+    transform: none;
   }
 }

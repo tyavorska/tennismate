@@ -1,0 +1,82 @@
+.trigger {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.trigger[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.popover {
+  min-width: 15rem;
+  padding: var(--space-2);
+  color: var(--foreground);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+}
+
+.popover[data-entering] {
+  animation: drop-in 160ms ease-out;
+}
+
+/* A pointer-opened menu focuses this container; the focused item carries the visible ring. */
+.menu,
+.menu:focus-visible {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  outline: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  color: var(--foreground);
+  text-decoration: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  outline: none;
+}
+
+.item[data-focused] {
+  background: var(--chip-bg);
+}
+
+.item[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.item[data-disabled] {
+  cursor: not-allowed;
+  color: var(--muted);
+}
+
+.separator {
+  height: var(--border-width);
+  margin: var(--space-1) 0;
+  background: var(--border);
+  border: none;
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-2)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover[data-entering] {
+    animation: none;
+  }
+}

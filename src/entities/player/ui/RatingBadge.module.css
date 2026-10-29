@@ -1,0 +1,14 @@
+.badge {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.5rem;
+  aspect-ratio: 1 / 1.1;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-style: italic;
+  font-weight: 800;
+  color: var(--badge-fg);
+  background: var(--badge-bg);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}

@@ -1,23 +1,10 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import type { ApiError } from '@/shared/api';
 import { Button, FormAlert } from '@/shared/ui';
-import { signOut } from '../api/signOutApi';
+import { useSignOut } from '../model/useSignOut';
 
 export function SignOutButton() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const mutation = useMutation<undefined, ApiError>({
-    mutationFn: signOut,
-    onSuccess: () => {
-      // Drop every cached query so the next user never sees this user's data.
-      queryClient.clear();
-      router.replace('/');
-      router.refresh();
-    },
-  });
+  const mutation = useSignOut();
 
   return (
     <>

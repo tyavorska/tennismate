@@ -1,0 +1,25 @@
+.providers {
+  display: flex;
+  gap: 0.625rem;
+}
+
+.providers > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5714;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-top: var(--border-width) solid var(--border);
+}

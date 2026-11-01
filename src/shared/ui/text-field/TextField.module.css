@@ -1,21 +1,28 @@
+/* Forms tune the size through --field-gap, --field-pad-y/x, --field-font and --field-line. */
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--field-gap, 0.25rem);
 }
 
 .label {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  line-height: 1.5455;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .input {
-  padding: var(--space-3);
+  padding: var(--field-pad-y, 0.6875rem) var(--field-pad-x, 0.875rem);
   font: inherit;
+  font-size: var(--field-font, var(--text-sm));
+  line-height: var(--field-line, 1.5714);
   color: var(--foreground);
-  background: var(--surface);
-  border: var(--border-width) solid var(--border-strong);
-  border-radius: var(--radius);
+  background: var(--background);
+  border: var(--border-width) solid var(--border);
+  border-radius: 0.75rem;
   outline: none;
 }
 

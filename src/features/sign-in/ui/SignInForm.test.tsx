@@ -17,7 +17,7 @@ async function fillAndSubmit(email: string, password: string): Promise<void> {
   const user = userEvent.setup();
   await user.type(screen.getByLabelText('Email'), email);
   await user.type(screen.getByLabelText('Password'), password);
-  await user.click(screen.getByRole('button', { name: 'Sign in with email' }));
+  await user.click(screen.getByRole('button', { name: 'Log in' }));
 }
 
 beforeEach(() => {

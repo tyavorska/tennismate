@@ -1,0 +1,30 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  color: var(--hero-fg);
+  background: var(--navy);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0.5rem var(--space-4);
+}
+
+.stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-4) var(--space-12);
+}
+
+@media (min-width: 48rem) {
+  .header {
+    padding: 0.5rem var(--space-8);
+  }
+}

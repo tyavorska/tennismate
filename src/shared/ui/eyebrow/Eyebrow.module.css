@@ -1,0 +1,13 @@
+.eyebrow {
+  color: var(--eyebrow-color, var(--peri-text));
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  line-height: 1.5455;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.onDark {
+  --eyebrow-color: var(--peri-hi);
+}

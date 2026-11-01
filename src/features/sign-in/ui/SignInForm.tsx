@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from 'react-aria-components';
 import { useForm } from 'react-hook-form';
 import { applyFieldErrors } from '@/shared/lib';
-import { Button, FormAlert, FormTextField } from '@/shared/ui';
+import { Button, FormAlert, FormTextField, SocialAuth } from '@/shared/ui';
 import { signInDefaults, signInSchema, type SignInInput } from '../model/signInSchema';
 import { useSignIn } from '../model/useSignIn';
 import styles from './SignInForm.module.css';
@@ -13,12 +13,14 @@ import styles from './SignInForm.module.css';
 type SignInFormProps = {
   /** 1 when the form is the page's main content, 2 when it sits inside a labelled dialog. */
   headingLevel?: 1 | 2;
+  /** Swaps the form in place instead of navigating to the other auth page. */
+  onSwitch?: () => void;
   returnTo?: string;
 };
 
 const fields = ['email', 'password'] as const;
 
-export function SignInForm({ headingLevel = 2, returnTo }: SignInFormProps) {
+export function SignInForm({ headingLevel = 2, onSwitch, returnTo }: SignInFormProps) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const signIn = useSignIn(returnTo ?? null);
   const { control, handleSubmit, setError } = useForm<SignInInput>({
@@ -39,23 +41,9 @@ export function SignInForm({ headingLevel = 2, returnTo }: SignInFormProps) {
 
   return (
     <div className={styles.root}>
-      <header className={styles.header}>
-        <Heading className={styles.title}>Sign in to TennisMate</Heading>
-        <p className={styles.subtitle}>Use the same account as the TennisMate app.</p>
-      </header>
+      <Heading className={styles.title}>Welcome back</Heading>
 
-      <div className={styles.providers}>
-        <Button variant="secondary" isDisabled>
-          Continue with Google
-        </Button>
-        <Button variant="secondary" isDisabled>
-          Continue with Apple
-        </Button>
-      </div>
-
-      <p className={styles.divider}>
-        <span>or email</span>
-      </p>
+      <SocialAuth />
 
       <Form className={styles.form} onSubmit={handleSubmit(onSubmit)} validationBehavior="aria">
         <FormTextField
@@ -72,8 +60,12 @@ export function SignInForm({ headingLevel = 2, returnTo }: SignInFormProps) {
           type="password"
           label="Password"
           autoComplete="current-password"
-          placeholder="At least 8 characters"
+          placeholder="Your password"
         />
+
+        <Link href="/forgot-password" className={styles.forgot}>
+          Forgot password?
+        </Link>
 
         {formError !== undefined && (
           <FormAlert referenceId={formError.kind === 'server' ? formError.requestId : undefined}>
@@ -81,29 +73,23 @@ export function SignInForm({ headingLevel = 2, returnTo }: SignInFormProps) {
           </FormAlert>
         )}
 
-        <Button type="submit" isPending={signIn.isPending}>
-          {signIn.isPending ? 'Signing in…' : 'Sign in with email'}
+        <Button type="submit" variant="ball" isPending={signIn.isPending}>
+          {signIn.isPending ? 'Logging in…' : 'Log in'}
         </Button>
       </Form>
 
-      <div className={styles.links}>
-        <Link href="/sign-up" replace className={styles.link}>
-          Create account
-        </Link>
-        <Link href="/forgot-password" className={styles.link}>
-          Forgot password?
-        </Link>
-      </div>
-
-      <footer className={styles.legal}>
-        <Link href="/privacy" className={styles.legalLink}>
-          Privacy
-        </Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/terms" className={styles.legalLink}>
-          Terms
-        </Link>
-      </footer>
+      <p className={styles.note}>
+        New to Let.?{' '}
+        {onSwitch === undefined ? (
+          <Link href="/sign-up" replace className={styles.link}>
+            Create a free account
+          </Link>
+        ) : (
+          <button type="button" className={styles.link} onClick={onSwitch}>
+            Create a free account
+          </button>
+        )}
+      </p>
     </div>
   );
 }

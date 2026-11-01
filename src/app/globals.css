@@ -1,72 +1,52 @@
 :root {
-  --primary-yellow: #e1ff00;
-  --primary-black: #0f1822;
-  --primary-grey: #f7f8fa;
-  --primary-white: #ffffff;
-  --link-normal: #006ce4;
-  --link-visited: #754cb1;
-  --link-hover: #4999f2;
-  --link-active: #0053b0;
-  --secondary-yellow-80: #e7ff24;
-  --secondary-yellow-60: #f0ff70;
-  --secondary-yellow-40: #f7ffa3;
-  --secondary-yellow-20: #fcffd1;
-  --secondary-black-5: #f0f0f1;
-  --secondary-black-10: #e9eaeb;
-  --secondary-black-12: #e5edf5;
-  --secondary-black-15: #dcdcdc;
-  --secondary-black-20: #c8cacd;
-  --secondary-black-30: #97b6d9;
-  --secondary-black-35: #a1a5aa;
-  --secondary-black-40: #4c7cb1;
-  --secondary-black-50: #36577c;
-  --secondary-black-65: #46586c;
-  --secondary-black-70: #2e4a6b;
-  --secondary-black-80: #22374e;
-  --secondary-black-90: #172535;
-  --secondary-black-100: #0a1017;
-  --secondary-red-98: #fff8f7;
-  --secondary-red-95: #ffedeb;
-  --secondary-red-90: #ffdad6;
-  --secondary-red-80: #ffb4ac;
-  --secondary-red-70: #ff897f;
-  --secondary-red-50: #e7242a;
-  --secondary-red-40: #c00017;
-  --secondary-red-35: #a90013;
-  --secondary-red-25: #7d000b;
-  --secondary-red-20: #690007;
-  --secondary-red-10: #410003;
-  --secondary-green-98: #eaffe9;
-  --secondary-green-95: #dcf9e0;
-  --secondary-green-90: #79fca0;
-  --secondary-green-80: #5bdf87;
-  --secondary-green-70: #3ac26e;
-  --secondary-green-60: #06a656;
-  --secondary-green-50: #008945;
-  --secondary-green-40: #006d36;
-  --secondary-green-35: #00602e;
-  --secondary-green-30: #005227;
-  --secondary-green-25: #004520;
-  --secondary-green-20: #003919;
-  --secondary-green-10: #00210c;
+  /* Palette from the Let. design: navy ink, periwinkle accents, cream paper, tennis-ball yellow. */
+  --navy: #0b1a3a;
+  --navy-2: #13254d;
+  --navy-3: #1b3163;
+  --navy-deep: #071229;
+  --peri: #6c80b4;
+  --peri-hi: #8597c8;
+  --peri-soft: #cbd2e6;
+  --cream: #e6e1d8;
+  --cream-2: #dcd6cc;
+  --cream-card: #f4f1eb;
+  --cream-soft: #a9b2cb;
+  --ink-soft: #4b5671;
+  --ball: #d6ec5a;
+  --ball-soft: #eef7b4;
+  /* Eyebrow text on cream: --peri-text is 5:1 on --cream, --peri (the Figma value) only 3.2:1. */
+  --peri-text: #4a5d99;
+  --ok: #2f7a5a;
+  --ok-hi: #5bc08d;
+  --alert: #b02a40;
+  --alert-badge: #c0424f;
+  --alert-hi: #ff897f;
+  --night: #12254c;
+  --night-line: #22376b;
 
   /* Semantic tokens */
-  --background: var(--primary-grey);
-  --surface: var(--primary-white);
-  --foreground: var(--primary-black);
-  --muted: var(--secondary-black-65);
-  --border: var(--secondary-black-10);
+  --background: var(--cream);
+  --surface: var(--cream-card);
+  --foreground: var(--navy);
+  /* --muted on --surface is 6.6:1, on --background 5.7:1. */
+  --muted: var(--ink-soft);
+  --border: rgb(11 26 58 / 14%);
+  --line: rgb(11 26 58 / 14%);
   /* Boundaries of controls (inputs, outlined buttons, switches): 3:1 against surface. */
-  --border-strong: var(--secondary-black-65);
-  --danger: var(--secondary-red-40);
-  --focus-ring: var(--link);
-  --accent: var(--primary-yellow);
-  --accent-soft: var(--secondary-yellow-20);
-  --accent-contrast: var(--primary-black);
-  --link: var(--link-normal);
-  --link-visited-color: var(--link-visited);
-  --link-hover-color: var(--link-hover);
-  --link-active-color: var(--link-active);
+  --border-strong: var(--ink-soft);
+  --danger: var(--alert);
+  --focus-ring: var(--navy-3);
+  /* Primary actions are navy with cream text. */
+  --accent: var(--navy);
+  --accent-hover: var(--navy-3);
+  --accent-soft: var(--peri-soft);
+  --accent-contrast: var(--cream);
+  /* Tennis-ball yellow for highlights on dark bands. */
+  --highlight: var(--ball);
+  --link: #2b4a94;
+  --link-visited-color: #5b4a8c;
+  --link-hover-color: var(--navy);
+  --link-active-color: var(--navy-3);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -74,74 +54,91 @@
   --space-4: 1rem;
   --space-5: 1.25rem;
   --space-6: 1.5rem;
+  --space-7: 2.25rem;
   --space-8: 3rem;
   --space-12: 5rem;
 
+  --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
+  --text-btn: 0.8125rem;
   --text-sm: 0.875rem;
+  --text-base: 1rem;
   --text-lg: 1.125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
+  --text-xl: 1.625rem;
+  --text-card-title: 2.125rem;
+  --text-2xl: 2.75rem;
   --text-3xl: 3rem;
-  --text-display: clamp(2rem, 1.25rem + 3.5vw, 3.75rem);
+  --text-stat: 4rem;
+  --text-hero: clamp(3.5rem, 2rem + 4vw, 5rem);
+  --text-hero-lg: clamp(4.5rem, 2rem + 8vw, 7rem);
+  --text-display: var(--text-hero);
 
-  --font-display: var(--font-sans), Arial, Helvetica, sans-serif;
+  --font-body: var(--font-manrope), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-sofia), 'Arial Narrow', Impact, sans-serif;
 
   --radius: 0.5rem;
-  --radius-lg: 1rem;
+  --radius-lg: 1.125rem;
   --radius-xl: 1.5rem;
-  --radius-full: 50rem;
+  --radius-full: 62.4375rem;
   --border-width: 0.0625rem;
   --focus-ring-width: 0.125rem;
-  --focus-ring-offset: 0.125rem;
-  --shadow-sm: 0 0.0625rem 0.1875rem rgb(0 0 0 / 30%);
-  --shadow-md: 0 0.5rem 1.5rem rgb(15 24 34 / 10%);
-  --shadow-lg: 0 1rem 2.5rem rgb(15 24 34 / 18%);
+  --focus-ring-offset: 0.1875rem;
+  --shadow-sm: 0 0.0625rem 0.1875rem rgb(11 26 58 / 25%);
+  --shadow-md: 0 0.5rem 1.5rem rgb(11 26 58 / 12%);
+  --shadow-lg: 0 1rem 2.5rem rgb(11 26 58 / 20%);
   --page-width: 64rem;
-  --shell-width: 80rem;
+  --shell-width: 81.25rem;
+  --site-width: 90rem;
+  --site-pad: 4.375rem;
 
-  /* Brand green for small accents: 9:1 on --surface in light, 7:1 on --chip-bg in dark. */
-  --brand: var(--secondary-green-30);
-  --brand-soft: var(--secondary-green-95);
+  /* Green for small accents: 5:1 on --surface in light, 6:1 on --chip-bg in dark. */
+  --brand: var(--ok);
+  --brand-soft: #d9ece2;
 
-  /* Neutral fill for chips, pills and hovered menu items. --muted on it is 6.4:1 (4.9:1 in dark). */
-  --chip-bg: var(--secondary-black-5);
+  /* Neutral fill for chips, pills and hovered menu items. --muted on it is 5.2:1 (6.6:1 in dark). */
+  --chip-bg: var(--cream-2);
 
-  /* Navy hero band, the same in both themes. Yellow on it is 16:1, --hero-muted 7:1. */
-  --hero-bg: var(--primary-black);
-  --hero-fg: var(--primary-white);
-  --hero-muted: var(--secondary-black-35);
-  --hero-line: rgb(225 255 0 / 18%);
+  /* Navy hero band, the same in both themes. Ball yellow on it is 13:1, --hero-muted 8:1. */
+  --hero-bg: var(--navy);
+  --hero-fg: var(--cream);
+  --hero-muted: var(--cream-soft);
+  --hero-line: rgb(230 225 216 / 15%);
   --hero-border: transparent;
-  --hero-tile-bg: rgb(255 255 255 / 6%);
-  --hero-tile-border: rgb(255 255 255 / 14%);
+  --hero-tile-bg: rgb(230 225 216 / 6%);
+  --hero-tile-border: rgb(230 225 216 / 14%);
 
-  /* Avatars and rating badges: navy with yellow text in light, inverted in dark. */
-  --badge-bg: var(--primary-black);
-  --badge-fg: var(--primary-yellow);
+  /* Avatars and rating badges: navy with ball-yellow text in light, inverted in dark. */
+  --badge-bg: var(--navy);
+  --badge-fg: var(--ball);
 
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --background: var(--primary-black);
-  --surface: var(--secondary-black-90);
-  --foreground: var(--primary-white);
-  --muted: var(--secondary-black-35);
-  --border: var(--secondary-black-80);
-  --border-strong: var(--secondary-black-40);
-  --danger: var(--secondary-red-70);
-  --accent-soft: var(--secondary-black-80);
-  --link: var(--link-hover);
-  --link-hover-color: var(--secondary-black-30);
-  --link-visited-color: #b496dc;
-  --brand: var(--secondary-green-80);
-  --brand-soft: var(--secondary-black-80);
-  --chip-bg: var(--secondary-black-80);
-  --hero-bg: var(--secondary-black-100);
+  --background: var(--navy-deep);
+  --surface: var(--night);
+  --foreground: var(--cream);
+  --muted: var(--cream-soft);
+  --border: rgb(230 225 216 / 13%);
+  --border-strong: var(--peri-hi);
+  --danger: var(--alert-hi);
+  --focus-ring: var(--peri-hi);
+  --accent: var(--peri-hi);
+  --accent-hover: var(--peri-soft);
+  --accent-soft: var(--night-line);
+  --accent-contrast: var(--navy-deep);
+  --link: var(--peri-hi);
+  --link-hover-color: var(--peri-soft);
+  --link-visited-color: #b9a6dc;
+  --link-active-color: var(--cream);
+  --peri-text: var(--peri-hi);
+  --brand: var(--ok-hi);
+  --brand-soft: var(--night-line);
+  --chip-bg: var(--night-line);
+  --hero-bg: var(--navy);
   --hero-border: var(--border);
-  --badge-bg: var(--primary-yellow);
-  --badge-fg: var(--primary-black);
+  --badge-bg: var(--ball);
+  --badge-fg: var(--navy-deep);
   --shadow-md: 0 0.5rem 1.5rem rgb(0 0 0 / 35%);
   --shadow-lg: 0 1rem 2.5rem rgb(0 0 0 / 50%);
   color-scheme: dark;
@@ -156,9 +153,20 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 /* One focus style for every focusable element (WCAG 2.4.7, 2.4.13). */

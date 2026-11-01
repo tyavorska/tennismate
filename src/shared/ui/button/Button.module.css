@@ -35,7 +35,7 @@
 }
 
 .primary[data-hovered] {
-  background: var(--secondary-yellow-60);
+  background: var(--accent-hover);
 }
 
 .secondary {
@@ -56,4 +56,67 @@
 .ghost[data-hovered] {
   color: var(--foreground);
   background: var(--accent-soft);
+}
+
+/* Pill buttons from the Let. design: lime call to action and a quiet outline. */
+.ball,
+.outline {
+  padding: var(--pill-y, 0.75rem) var(--pill-x, 1.125rem);
+  font-size: var(--text-btn);
+  font-weight: 700;
+  line-height: 1.5385;
+  border-radius: var(--radius-full);
+}
+
+.ball {
+  color: var(--navy);
+  background: var(--ball);
+}
+
+.ball[data-hovered] {
+  background: var(--ball-soft);
+}
+
+.outline {
+  color: var(--foreground);
+  background: transparent;
+  border-color: var(--border);
+}
+
+.outline[data-hovered] {
+  background: var(--accent-soft);
+}
+
+/* Provider buttons that are not wired up yet keep the full-strength look from the design. */
+.outline[data-disabled] {
+  cursor: default;
+  opacity: 1;
+}
+
+/* Links styled as buttons. */
+.link {
+  text-decoration: none;
+}
+
+.link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.ball.link:hover {
+  background: var(--ball-soft);
+}
+
+.outlineOnDark {
+  padding: var(--pill-y, 0.75rem) var(--pill-x, 1.125rem);
+  color: var(--cream);
+  font-size: var(--text-btn);
+  font-weight: 700;
+  line-height: 1.5385;
+  border-color: var(--cream-soft);
+  border-radius: var(--radius-full);
+}
+
+.outlineOnDark:hover {
+  background: var(--navy-3);
 }

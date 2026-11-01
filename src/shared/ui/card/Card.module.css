@@ -1,0 +1,10 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap, 0.625rem);
+  padding: var(--card-pad, 1.5rem);
+  color: var(--navy);
+  background: var(--cream-card);
+  border: var(--border-width) solid var(--line);
+  border-radius: 1.125rem;
+}

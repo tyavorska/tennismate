@@ -32,7 +32,7 @@ function renderShell(): void {
 
 async function openAccountMenu(): Promise<ReturnType<typeof userEvent.setup>> {
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: /Hi, Tania/ }));
+  await user.click(screen.getByRole('button', { name: /Tania/ }));
   return user;
 }
 
@@ -49,19 +49,16 @@ describe('AppShell', () => {
       renderShell();
 
       const nav = screen.getByRole('navigation', { name: 'Main' });
-      expect(nav).toContainElement(screen.getByRole('link', { name: 'Find match' }));
-      expect(screen.getByRole('link', { name: 'Find match' })).toHaveAttribute(
-        'aria-current',
-        'page',
-      );
+      expect(nav).toContainElement(screen.getByRole('link', { name: 'Home' }));
+      expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     });
   });
 
   describe('account menu', () => {
-    it('greets the viewer and shows their rating', () => {
+    it('shows the first name of the viewer', () => {
       renderShell();
 
-      expect(screen.getByRole('button', { name: 'Hi, Tania Rating 2.0' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tania' })).toBeInTheDocument();
     });
 
     it('opens a menu with the profile link and sign out', async () => {
@@ -69,7 +66,7 @@ describe('AppShell', () => {
 
       await openAccountMenu();
 
-      expect(screen.getByRole('menu', { name: 'Hi, Tania Rating 2.0' })).toBeInTheDocument();
+      expect(screen.getByRole('menu', { name: 'Tania' })).toBeInTheDocument();
       expect(screen.getByRole('menuitem', { name: 'Your profile' })).toHaveAttribute(
         'href',
         '/account',

@@ -1,8 +1,13 @@
 export { Button } from './button/Button';
-export { Drawer } from './drawer/Drawer';
+export { ButtonLink } from './button/ButtonLink';
+export { Card } from './card/Card';
+export { Eyebrow } from './eyebrow/Eyebrow';
 export { FormAlert } from './form-alert/FormAlert';
 export { InlineScript } from './inline-script/InlineScript';
+export { Logo } from './logo/Logo';
+export { LogoLink } from './logo/LogoLink';
 export { Menu, MenuItem, MenuSeparator } from './menu/Menu';
+export { SocialAuth } from './social-auth/SocialAuth';
 export { FormTextField } from './text-field/FormTextField';
 export { TextField } from './text-field/TextField';
 export { ToggleChipGroup } from './toggle-chip-group/ToggleChipGroup';

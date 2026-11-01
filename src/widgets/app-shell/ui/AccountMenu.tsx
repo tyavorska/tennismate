@@ -1,6 +1,6 @@
 'use client';
 
-import { firstNameOf, formatRating, initialsOf, type Player } from '@/entities/player';
+import { firstNameOf, initialsOf, type Player } from '@/entities/player';
 import { useSignOut } from '@/features/sign-out';
 import { FormAlert, Menu, MenuItem, MenuSeparator } from '@/shared/ui';
 import styles from './AccountMenu.module.css';
@@ -21,10 +21,7 @@ export function AccountMenu({ viewer }: AccountMenuProps) {
             <span className={styles.avatar} aria-hidden="true">
               {initialsOf(viewer.name)}
             </span>
-            <span className={styles.text}>
-              <span className={styles.greeting}>Hi, {firstNameOf(viewer.name)}</span>{' '}
-              <span className={styles.rating}>Rating {formatRating(viewer.rating)}</span>
-            </span>
+            <span className={styles.name}>{firstNameOf(viewer.name)}</span>
           </>
         }
       >

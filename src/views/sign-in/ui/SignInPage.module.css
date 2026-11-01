@@ -1,8 +1,14 @@
 .page {
-  max-width: 28rem;
-  margin: var(--space-8) auto;
+  width: 100%;
+  max-width: 42.5rem;
   padding: var(--space-6);
+  color: var(--foreground);
   background: var(--surface);
-  border: var(--border-width) solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
+}
+
+@media (min-width: 40rem) {
+  .page {
+    padding: var(--space-7);
+  }
 }

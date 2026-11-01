@@ -1,0 +1,4 @@
+/* Focus lands here only from code after the form swaps, so it needs no ring. */
+.card:focus {
+  outline: none;
+}

@@ -20,6 +20,7 @@ export { SearchField } from './search-field/SearchField';
 export { SelectField } from './select/SelectField';
 export type { SelectOption } from './select/SelectField';
 export { SocialAuth } from './social-auth/SocialAuth';
+export { Switch } from './switch/Switch';
 export { ToggleGroup, ToggleItem } from './toggle-group/ToggleGroup';
 export { ToggleChip } from './toggle-chip/ToggleChip';
 export { FormTextField } from './text-field/FormTextField';

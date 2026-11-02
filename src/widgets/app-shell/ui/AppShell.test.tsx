@@ -141,6 +141,16 @@ describe('AppShell', () => {
       expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
     });
 
+    it('links to the profile settings page from the menu', async () => {
+      renderShell();
+      await openAccountMenu();
+
+      expect(screen.getByRole('menuitem', { name: 'Profile settings' })).toHaveAttribute(
+        'href',
+        '/profile',
+      );
+    });
+
     it('signs out and goes to the landing page', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
       renderShell();

@@ -10,7 +10,7 @@ export function useSignUp(): UseMutationResult<User, ApiError, SignUpInput> {
   return useMutation<User, ApiError, SignUpInput>({
     mutationFn: ({ email, password }) => signUp({ email, password }),
     onSuccess: () => {
-      router.replace('/home');
+      router.replace('/players');
       router.refresh();
     },
   });

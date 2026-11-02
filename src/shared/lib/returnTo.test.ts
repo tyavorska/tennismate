@@ -7,14 +7,14 @@ describe('safeReturnTo', () => {
   });
 
   it('falls back to home when there is no value', () => {
-    expect(safeReturnTo(null)).toBe('/home');
-    expect(safeReturnTo(undefined)).toBe('/home');
+    expect(safeReturnTo(null)).toBe('/players');
+    expect(safeReturnTo(undefined)).toBe('/players');
   });
 
   it.each(['https://evil.example', '//evil.example', '/\\evil.example', 'home'])(
     'rejects %s, which could leave the site',
     (value) => {
-      expect(safeReturnTo(value)).toBe('/home');
+      expect(safeReturnTo(value)).toBe('/players');
     },
   );
 });

@@ -1,0 +1,59 @@
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  color: var(--foreground);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  cursor: pointer;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.track {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.5rem;
+  padding: 0.1875rem;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+.thumb {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: var(--border-strong);
+  border-radius: 50%;
+  transition: transform 150ms ease-out;
+}
+
+.switch[data-selected] .track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch[data-selected] .thumb {
+  background: var(--accent-contrast);
+  transform: translateX(1rem);
+}
+
+.switch[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
+}

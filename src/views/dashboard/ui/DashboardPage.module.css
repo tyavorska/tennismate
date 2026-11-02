@@ -159,8 +159,8 @@
   flex-direction: column;
   gap: 1.75rem;
   padding: 3.5rem var(--space-4);
-  color: var(--navy);
-  background: var(--cream);
+  color: var(--foreground);
+  background: var(--background);
 }
 
 .updatesHeader {
@@ -209,7 +209,7 @@
 }
 
 .cardText {
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
@@ -312,7 +312,7 @@
 }
 
 .status {
-  --eyebrow-color: var(--ink-soft);
+  --eyebrow-color: var(--muted);
 }
 
 .statusOk {
@@ -324,7 +324,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem;
-  background: var(--cream);
+  background: var(--background);
   border-radius: 0.75rem;
 }
 
@@ -360,19 +360,14 @@
 .row dt {
   flex-shrink: 0;
   width: 3.125rem;
-  color: var(--ink-soft);
+  color: var(--muted);
 }
 
 .row dd {
   font-weight: 700;
 }
 
-:global(:root[data-theme='dark']) .updates {
-  color: var(--cream);
-  background: var(--navy-deep);
-}
-
-@media (min-width: 64rem) {
+@media (min-width: 56.25rem) {
   .hero {
     grid-template-columns: minmax(0, 1fr) 28.75rem;
     padding: 3.5rem var(--site-pad);

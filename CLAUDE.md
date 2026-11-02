@@ -254,3 +254,14 @@ A component's folder is kebab-case even when the file inside is PascalCase:
 - Map keys to values with a lookup table (`Record<Key, Value>`), not an `if`/`else` chain or
   `switch`.
 - Prefer readable, named steps over clever one-liners. Derive state instead of storing it.
+
+### Comments
+
+- Default to no comment. Name things well so the code explains itself.
+- Write a comment only when the _why_ is not visible in the code: a hidden constraint,
+  a deliberate deviation (for example a contrast fix), or a workaround for a bug.
+- Never describe what the code does, and never reference a design file, ticket or
+  conversation ("per Figma", "as requested"). Those go stale; put the number in a
+  token or in the commit message instead.
+- Match the surrounding code: if neighbouring files have no comments, add none.
+- Keep a comment to one line. Delete it when the reason is gone.

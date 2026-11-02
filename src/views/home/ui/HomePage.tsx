@@ -98,7 +98,7 @@ export async function HomePage() {
             Play from any device
           </h2>
         </div>
-        <ul className={styles.cards}>
+        <ul className={`${styles.cards} ${styles.cardsDevices}`}>
           {devices.map((device) => (
             <Card as="li" key={device.title} className={styles.card}>
               <span className={device.live ? styles.tagLive : styles.tag}>

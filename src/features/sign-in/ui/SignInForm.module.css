@@ -13,7 +13,7 @@
 
 .title {
   font-size: var(--card-title, var(--text-2xl));
-  line-height: 1;
+  line-height: var(--card-title-lh, 1);
 }
 
 .form {
@@ -23,7 +23,7 @@
 }
 
 .note {
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
@@ -40,11 +40,7 @@
 
 .forgot {
   align-self: flex-end;
-  color: var(--navy);
+  color: var(--foreground);
   font-size: var(--text-sm);
   line-height: 1.5714;
-}
-
-:global(:root[data-theme='dark']) .forgot {
-  color: var(--cream);
 }

@@ -7,7 +7,7 @@
 
 .title {
   font-size: var(--card-title, var(--text-2xl));
-  line-height: 1;
+  line-height: var(--card-title-lh, 1);
 }
 
 .form {
@@ -17,7 +17,7 @@
 }
 
 .note {
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
@@ -39,6 +39,7 @@
 .inline {
   --card-gap: 0.75rem;
   --card-title: var(--text-card-title);
+  --card-title-lh: 1.2941;
 }
 
 .dots {
@@ -54,11 +55,7 @@
 }
 
 .dotActive {
-  background: var(--navy);
-}
-
-:global(:root[data-theme='dark']) .dotActive {
-  background: var(--cream);
+  background: var(--accent);
 }
 
 .roles {
@@ -80,7 +77,7 @@
 }
 
 .roleSelected {
-  border: var(--focus-ring-width) solid var(--navy);
+  border: var(--focus-ring-width) solid var(--accent);
 }
 
 .roleSoon {
@@ -99,14 +96,14 @@
   width: 1.375rem;
   height: 1.375rem;
   fill: none;
-  stroke: var(--navy);
+  stroke: var(--foreground);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .roleName {
-  color: var(--navy);
+  color: var(--foreground);
   font-family: var(--font-display);
   font-size: 1.375rem;
   font-weight: 800;
@@ -116,21 +113,21 @@
 }
 
 .roleText {
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
 
 .tag {
   padding: 0.1875rem var(--space-2);
-  color: var(--navy);
+  color: var(--foreground);
   font-size: var(--text-2xs);
   font-weight: 800;
   line-height: 1.5455;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
-  background: var(--peri-soft);
+  background: var(--tag-bg);
   border-radius: var(--radius-full);
 }
 
@@ -153,7 +150,7 @@
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
@@ -163,17 +160,26 @@
   width: 0.875rem;
   height: 1.375rem;
   fill: none;
-  stroke: var(--navy);
+  stroke: var(--foreground);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-:global(:root[data-theme='dark']) .roleIcon,
-:global(:root[data-theme='dark']) .lock {
-  stroke: var(--cream);
+/* The landing card in the dark theme has no privacy note. */
+:global(:root[data-theme='dark']) .inline .privacy {
+  display: none;
 }
 
-:global(:root[data-theme='dark']) .roleName {
-  color: var(--cream);
+/* Phones: role cards stack, the inline email and password fields stack. */
+@media (max-width: 30rem) {
+  .roles {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 32.5rem) {
+  .inline .credentials {
+    flex-direction: column;
+  }
 }

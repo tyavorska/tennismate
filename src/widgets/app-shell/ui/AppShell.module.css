@@ -10,7 +10,7 @@
   top: 0;
   z-index: 10;
   color: var(--cream);
-  background: var(--navy);
+  background: var(--hero-bg);
 }
 
 .bar {
@@ -95,7 +95,7 @@
   margin: 0 auto;
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 56.25rem) {
   .bar {
     padding-inline: var(--space-8);
   }

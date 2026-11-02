@@ -69,7 +69,8 @@
 }
 
 .ball {
-  color: var(--navy);
+  color: var(--hero-bg);
+  border-width: 0;
   background: var(--ball);
 }
 

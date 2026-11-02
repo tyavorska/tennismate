@@ -5,7 +5,7 @@
   align-items: center;
   padding: 1.25rem var(--space-4) 1.5rem;
   color: var(--cream);
-  background: var(--navy);
+  background: var(--hero-bg);
 }
 
 .heroCopy {
@@ -67,11 +67,11 @@
 }
 
 .features {
-  background: var(--cream);
+  background: var(--background);
 }
 
 .devices {
-  background: var(--cream-2);
+  background: var(--background-alt);
 }
 
 .intro {
@@ -81,14 +81,14 @@
 }
 
 .heading {
-  color: var(--navy);
+  color: var(--foreground);
   font-size: var(--text-2xl);
   line-height: 1;
 }
 
 .lead2 {
   max-width: 45rem;
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-base);
   line-height: 1.5625;
 }
@@ -97,11 +97,16 @@
   align-items: flex-start;
 }
 
+/* Features: 4 columns, 2 up to 900px, 1 up to 520px. Devices: 3 columns, then 1. */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   list-style: none;
+}
+
+.cardsDevices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .dot {
@@ -118,7 +123,7 @@
 }
 
 .cardText {
-  color: var(--ink-soft);
+  color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.5714;
 }
@@ -135,24 +140,25 @@
 }
 
 .tag {
-  color: var(--ink-soft);
+  color: var(--muted);
   border: var(--border-width) solid var(--line);
 }
 
 .tagLive {
-  color: var(--navy);
+  color: var(--hero-bg);
   background: var(--ball);
 }
 
 .footer {
   display: flex;
+  min-height: 9.75rem;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
   padding: 1.75rem var(--space-4);
   color: var(--cream-soft);
-  background: var(--navy-2);
+  background: var(--band-2);
 }
 
 .footerLogo {
@@ -173,7 +179,7 @@
   gap: var(--space-6);
   padding: 4rem var(--space-4);
   color: var(--cream);
-  background: var(--navy);
+  background: var(--hero-bg);
 }
 
 .stats {
@@ -206,40 +212,48 @@
   text-transform: uppercase;
 }
 
-/* Figma: 12 / 20 padding. */
 .ctaLink {
   --pill-x: 1.25rem;
 }
 
-:global(:root[data-theme='dark']) .features {
-  background: var(--navy-deep);
+/* Phones: tighter section padding. */
+@media (max-width: 47.9375rem) {
+  .features,
+  .devices,
+  .cta {
+    padding-block: 3rem;
+  }
 }
 
-:global(:root[data-theme='dark']) .devices {
-  background: var(--navy-2);
+@media (max-width: 56.25rem) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardsDevices {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-:global(:root[data-theme='dark']) .heading,
-:global(:root[data-theme='dark']) .lead2 {
-  color: var(--cream);
+@media (max-width: 32.5rem) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 48rem) {
+  .hero,
+  .features,
+  .devices,
+  .footer,
+  .cta {
+    padding-inline: var(--site-pad);
+  }
+}
+
+/* The hero stacks below 940px, like the prototype. */
+@media (min-width: 58.75rem) {
   .hero {
     grid-template-columns: minmax(0, 1fr) 35rem;
-    padding: 1.25rem var(--site-pad) 1.5rem;
-  }
-
-  .features,
-  .devices {
-    padding: 4.5rem var(--site-pad);
-  }
-
-  .footer {
-    padding: 1.75rem var(--site-pad);
-  }
-
-  .cta {
-    padding: 4rem var(--site-pad);
   }
 }

@@ -31,7 +31,7 @@
   /* --muted on --surface is 6.6:1, on --background 5.7:1. */
   --muted: var(--ink-soft);
   --border: rgb(11 26 58 / 14%);
-  --line: rgb(11 26 58 / 14%);
+  --line: var(--border);
   /* Boundaries of controls (inputs, outlined buttons, switches): 3:1 against surface. */
   --border-strong: var(--ink-soft);
   --danger: var(--alert);
@@ -69,7 +69,7 @@
   --text-2xl: 2.75rem;
   --text-3xl: 3rem;
   --text-stat: 4rem;
-  --text-hero: clamp(3.5rem, 2rem + 4vw, 5rem);
+  --text-hero: clamp(3.375rem, 8vw, 5rem);
   --text-hero-lg: clamp(4.5rem, 2rem + 8vw, 7rem);
   --text-display: var(--text-hero);
 
@@ -89,7 +89,8 @@
   --page-width: 64rem;
   --shell-width: 81.25rem;
   --site-width: 90rem;
-  --site-pad: 4.375rem;
+  /* Side padding that keeps content inside a 90rem column: the header and every section share it. */
+  --site-pad: max(4.375rem, calc((100% - var(--site-width)) / 2 + 4.375rem));
 
   /* Green for small accents: 5:1 on --surface in light, 6:1 on --chip-bg in dark. */
   --brand: var(--ok);
@@ -100,6 +101,9 @@
 
   /* Navy hero band, the same in both themes. Ball yellow on it is 13:1, --hero-muted 8:1. */
   --hero-bg: var(--navy);
+  --band-2: var(--navy-2);
+  --background-alt: var(--cream-2);
+  --tag-bg: var(--peri-soft);
   --hero-fg: var(--cream);
   --hero-muted: var(--cream-soft);
   --hero-line: rgb(230 225 216 / 15%);
@@ -131,11 +135,14 @@
   --link-hover-color: var(--peri-soft);
   --link-visited-color: #b9a6dc;
   --link-active-color: var(--cream);
-  --peri-text: var(--peri-hi);
+  --peri-text: #7083b8;
   --brand: var(--ok-hi);
   --brand-soft: var(--night-line);
   --chip-bg: var(--night-line);
-  --hero-bg: var(--navy);
+  --hero-bg: #0a1734;
+  --band-2: #11234a;
+  --background-alt: #0b1a3a;
+  --tag-bg: var(--night-line);
   --hero-border: var(--border);
   --badge-bg: var(--ball);
   --badge-fg: var(--navy-deep);

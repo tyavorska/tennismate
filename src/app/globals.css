@@ -102,7 +102,6 @@
   /* Navy hero band, the same in both themes. Ball yellow on it is 13:1, --hero-muted 8:1. */
   --hero-bg: var(--navy);
   --band-2: var(--navy-2);
-  --background-alt: var(--cream-2);
   --tag-bg: var(--peri-soft);
   --hero-fg: var(--cream);
   --hero-muted: var(--cream-soft);
@@ -141,7 +140,6 @@
   --chip-bg: var(--night-line);
   --hero-bg: #0a1734;
   --band-2: #11234a;
-  --background-alt: #0b1a3a;
   --tag-bg: var(--night-line);
   --hero-border: var(--border);
   --badge-bg: var(--ball);

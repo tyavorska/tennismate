@@ -64,14 +64,16 @@
   flex-direction: column;
   gap: 2rem;
   padding: 4.5rem var(--space-4);
-}
-
-.features {
   background: var(--background);
 }
 
+/* Features and devices read as one section: no band change, a 56px gap between them. */
+.features {
+  padding-bottom: 0;
+}
+
 .devices {
-  background: var(--background-alt);
+  padding-top: 3.5rem;
 }
 
 .intro {
@@ -97,23 +99,12 @@
   align-items: flex-start;
 }
 
-/* Features: 4 columns, 2 up to 900px, 1 up to 520px. Devices: 3 columns, then 1. */
+/* Features: 4 columns, 2 up to 900px, 1 up to 520px. */
 .cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   list-style: none;
-}
-
-.cardsDevices {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.dot {
-  width: 2.5rem;
-  height: 2.5rem;
-  background: var(--ball);
-  border-radius: 50%;
 }
 
 .cardTitle {
@@ -128,24 +119,64 @@
   line-height: 1.5714;
 }
 
-.tag,
-.tagLive {
-  padding: 0.25rem 0.625rem;
-  font-size: var(--text-2xs);
+/* Device cards stay dark in both themes. */
+.devicesList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  list-style: none;
+}
+
+.device {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1.5rem;
+  color: var(--cream);
+  background: var(--navy);
+  border-radius: 1.125rem;
+}
+
+.deviceText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.deviceTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 700;
+  line-height: 1.5625;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.deviceNote {
+  color: var(--cream-soft);
+  font-size: var(--text-xs);
+  line-height: 1.5833;
+}
+
+.deviceTag,
+.deviceTagLive {
+  align-self: flex-end;
+  padding: 0.25rem 0.5625rem;
+  font-size: 0.625rem;
   font-weight: 800;
-  line-height: 1.5455;
-  letter-spacing: 0.16em;
+  line-height: 1.7;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   border-radius: var(--radius-full);
 }
 
-.tag {
-  color: var(--muted);
-  border: var(--border-width) solid var(--line);
+.deviceTag {
+  background: rgb(230 225 216 / 15%);
 }
 
-.tagLive {
-  color: var(--hero-bg);
+.deviceTagLive {
+  color: var(--navy);
   background: var(--ball);
 }
 
@@ -171,15 +202,15 @@
   line-height: 1.5714;
 }
 
+/* Stats and the call to action sit under the devices, behind a thin rule. */
 .cta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
-  padding: 4rem var(--space-4);
-  color: var(--cream);
-  background: var(--hero-bg);
+  padding-top: 1.875rem;
+  border-top: var(--border-width) solid var(--line);
 }
 
 .stats {
@@ -195,6 +226,7 @@
 }
 
 .stat dd {
+  color: var(--foreground);
   font-family: var(--font-display);
   font-size: var(--text-stat);
   font-weight: 800;
@@ -204,7 +236,7 @@
 
 .stat dt {
   order: 1;
-  color: var(--cream-soft);
+  color: var(--muted);
   font-size: var(--text-2xs);
   font-weight: 800;
   line-height: 1.5455;
@@ -219,9 +251,12 @@
 /* Phones: tighter section padding. */
 @media (max-width: 47.9375rem) {
   .features,
-  .devices,
-  .cta {
+  .devices {
     padding-block: 3rem;
+  }
+
+  .features {
+    padding-bottom: 0;
   }
 }
 
@@ -230,7 +265,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .cardsDevices {
+  .devicesList {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -245,8 +280,7 @@
   .hero,
   .features,
   .devices,
-  .footer,
-  .cta {
+  .footer {
     padding-inline: var(--site-pad);
   }
 }

@@ -149,14 +149,6 @@ export function SignUpForm({ headingLevel = 2, onSwitch, layout = 'page' }: Sign
         )}{' '}
         · By joining you accept the terms and privacy policy .
       </p>
-
-      <p className={styles.privacy}>
-        <svg className={styles.lock} viewBox="0 0 14 14" aria-hidden="true">
-          <path d="M4.083 6.417h5.834c.644 0 1.166.522 1.166 1.166v3.5c0 .645-.522 1.167-1.166 1.167H4.083a1.167 1.167 0 0 1-1.166-1.167v-3.5c0-.644.522-1.166 1.166-1.166ZM4.667 6.417v-1.75a2.333 2.333 0 0 1 4.666 0v1.75" />
-        </svg>
-        Your email is never shown to other players and your password is stored only as a secure
-        hash.
-      </p>
     </div>
   );
 }

@@ -166,8 +166,8 @@
   stroke-linejoin: round;
 }
 
-/* The landing card in the dark theme has no privacy note. */
-:global(:root[data-theme='dark']) .inline .privacy {
+/* The landing card has no privacy note. */
+.inline .privacy {
   display: none;
 }
 

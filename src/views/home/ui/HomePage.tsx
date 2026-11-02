@@ -3,32 +3,57 @@ import { redirect } from 'next/navigation';
 import { ButtonLink, Card, Eyebrow, LogoLink } from '@/shared/ui';
 import { getViewer } from '@/server/players';
 import { HeroAuthCard } from './HeroAuthCard';
+import { HomeIcon, type HomeIconName } from './HomeIcons';
 import styles from './HomePage.module.css';
 
 const features = [
   {
+    icon: 'search',
     title: 'Players at your level',
     text: "Take the level quiz, filter by district and time, see who's free tonight.",
   },
   {
+    icon: 'ball',
     title: 'Book and split courts',
-    text: 'Courts near you. Pay only your share with BLIK or card.',
+    text: '38 courts across Kraków. Pay only your share with BLIK or card.',
   },
   {
+    icon: 'calendar',
     title: 'Calendar and chat',
     text: "Invites, bookings and who's free each day, all in one calendar.",
   },
   {
+    icon: 'trophy',
     title: 'Community and ranking',
     text: 'Stories, groups, a city ranking with verified levels, tournaments and coaches.',
   },
-] as const;
+] as const satisfies ReadonlyArray<{ icon: HomeIconName; title: string; text: string }>;
 
 const devices = [
-  { title: 'Web app', text: 'Works in any browser, add it to your home screen', live: true },
-  { title: 'iPhone app', text: 'App Store · push notifications for invites', live: false },
-  { title: 'Android app', text: 'Google Play · BLIK payments built in', live: false },
-] as const;
+  {
+    icon: 'laptop',
+    title: 'Web app',
+    text: 'Works in any browser, add it to your home screen',
+    live: true,
+  },
+  {
+    icon: 'phone',
+    title: 'iPhone app',
+    text: 'App Store · push notifications for invites',
+    live: false,
+  },
+  {
+    icon: 'phone',
+    title: 'Android app',
+    text: 'Google Play · BLIK payments built in',
+    live: false,
+  },
+] as const satisfies ReadonlyArray<{
+  icon: HomeIconName;
+  title: string;
+  text: string;
+  live: boolean;
+}>;
 
 const stats = [
   { value: '1,240', label: 'Players' },
@@ -83,7 +108,7 @@ export async function HomePage() {
         <ul className={styles.cards}>
           {features.map((feature) => (
             <Card as="li" key={feature.title} className={styles.card}>
-              <span className={styles.dot} aria-hidden="true" />
+              <HomeIcon name={feature.icon} />
               <h3 className={styles.cardTitle}>{feature.title}</h3>
               <p className={styles.cardText}>{feature.text}</p>
             </Card>
@@ -98,17 +123,34 @@ export async function HomePage() {
             Play from any device
           </h2>
         </div>
-        <ul className={`${styles.cards} ${styles.cardsDevices}`}>
+        <ul className={styles.devicesList}>
           {devices.map((device) => (
-            <Card as="li" key={device.title} className={styles.card}>
-              <span className={device.live ? styles.tagLive : styles.tag}>
+            <li key={device.title} className={styles.device}>
+              <HomeIcon name={device.icon} />
+              <div className={styles.deviceText}>
+                <h3 className={styles.deviceTitle}>{device.title}</h3>
+                <p className={styles.deviceNote}>{device.text}</p>
+              </div>
+              <span className={device.live ? styles.deviceTagLive : styles.deviceTag}>
                 {device.live ? 'Open now' : 'Coming soon'}
               </span>
-              <h3 className={styles.cardTitle}>{device.title}</h3>
-              <p className={styles.cardText}>{device.text}</p>
-            </Card>
+            </li>
           ))}
         </ul>
+
+        <div className={styles.cta}>
+          <dl className={styles.stats}>
+            {stats.map((stat) => (
+              <div key={stat.label} className={styles.stat}>
+                <dd>{stat.value}</dd>
+                <dt>{stat.label}</dt>
+              </div>
+            ))}
+          </dl>
+          <ButtonLink href="/#sign-up" className={styles.ctaLink}>
+            Create your free account
+          </ButtonLink>
+        </div>
       </section>
 
       <footer className={styles.footer}>
@@ -117,20 +159,6 @@ export async function HomePage() {
           Made for tennis players. Concept demo. People, games and events are sample data.
         </p>
       </footer>
-
-      <section className={styles.cta} aria-label="Join Let.">
-        <dl className={styles.stats}>
-          {stats.map((stat) => (
-            <div key={stat.label} className={styles.stat}>
-              <dd>{stat.value}</dd>
-              <dt>{stat.label}</dt>
-            </div>
-          ))}
-        </dl>
-        <ButtonLink href="/sign-up" className={styles.ctaLink}>
-          Create your free account
-        </ButtonLink>
-      </section>
     </main>
   );
 }

@@ -1,0 +1,29 @@
+.avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--avatar-size, 2.375rem);
+  height: var(--avatar-size, 2.375rem);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  background: var(--tag-bg);
+  border-radius: 50%;
+}
+
+.online {
+  position: relative;
+}
+
+.online::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--ok-hi);
+  border-radius: 50%;
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--avatar-ring, var(--surface));
+}

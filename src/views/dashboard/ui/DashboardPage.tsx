@@ -1,195 +1,136 @@
-import { redirect } from 'next/navigation';
-import { firstNameOf, formatRating, initialsOf } from '@/entities/player';
-import { getViewer, listPlayers } from '@/server/players';
-import { Card, Eyebrow } from '@/shared/ui';
-import { courtCount, courtOffers, nextGames, stories, updateCards } from '../model/sampleUpdates';
+import Link from 'next/link';
+import { NextGameList, sampleNextGames } from '@/entities/game';
+import { ButtonLink, Eyebrow, Icon, type IconName, VisuallyHidden } from '@/shared/ui';
+import {
+  courtOffers,
+  freeToday,
+  infoCards,
+  openGamesTonight,
+  stories,
+} from '../model/sampleUpdates';
+import { UpdateCard } from './UpdateCard';
 import styles from './DashboardPage.module.css';
 
-const todayFormat = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-});
+const quickActions = [
+  { href: '/players', label: 'Find a player', icon: 'search' },
+  { href: '/players?offer=1', label: "I'm free to play", icon: 'plus' },
+  { href: '/players?quiz=1', label: "What's my level?", icon: 'help' },
+] as const satisfies ReadonlyArray<{ href: string; label: string; icon: IconName }>;
 
-export async function DashboardPage() {
-  const viewer = await getViewer();
-  if (viewer === undefined) redirect('/sign-in');
+function names(players: ReadonlyArray<{ readonly name: string }>): string {
+  const [first, second, third] = players.map((player) => player.name);
+  return `${first}, ${second}, ${third}`;
+}
 
-  const players = listPlayers();
-  const ready = players.filter((player) => player.readyToPlay);
-  const readyCount = ready.length;
-  const readyNames = ready.slice(0, 3).map((player) => firstNameOf(player.name));
-
+export function DashboardPage() {
   return (
     <div className={styles.page}>
-      <section className={styles.hero} aria-labelledby="home-heading">
-        <div className={styles.heroText}>
-          <p className={styles.greeting}>
-            <span className={styles.avatar} aria-hidden="true">
-              {initialsOf(viewer.name)}
-            </span>
-            <span className={styles.greetingText}>
-              Hi {firstNameOf(viewer.name)} · NTRP {formatRating(viewer.rating)} ·{' '}
-              {viewer.neighborhood}
-            </span>
-          </p>
-          <p className={styles.meta}>
-            <span className={styles.badge}>KRK</span>
-            Kraków, Poland · 9 districts · {courtCount} courts
-          </p>
-          <h1 id="home-heading" className={styles.title}>
-            Let&apos;s <span className={styles.highlight}>play.</span>
-          </h1>
-          <p className={styles.lead}>
-            The tennis community in one place. Find a hitting partner at your level, see who&apos;s
-            free near you today, post your own game and keep every booking in your calendar.
-          </p>
+      <div className={styles.grid}>
+        <div className={styles.main}>
+          <header className={styles.heading}>
+            <Eyebrow>Updates</Eyebrow>
+            <h1 className={styles.title}>Today in Kraków tennis</h1>
+          </header>
 
-          <dl className={styles.stats}>
-            <div className={styles.stat}>
-              <dt>
-                <Eyebrow as="span" className={styles.statLabel}>
-                  Players
-                </Eyebrow>
-              </dt>
-              <dd>{players.length}</dd>
-            </div>
-            <div className={styles.stat}>
-              <dt>
-                <Eyebrow as="span" className={styles.statLabel}>
-                  Free today
-                </Eyebrow>
-              </dt>
-              <dd>{readyCount}</dd>
-            </div>
-            <div className={styles.stat}>
-              <dt>
-                <Eyebrow as="span" className={styles.statLabel}>
-                  Courts
-                </Eyebrow>
-              </dt>
-              <dd>{courtCount}</dd>
-            </div>
-          </dl>
-        </div>
-
-        <aside className={styles.today} aria-labelledby="today-heading">
-          <Eyebrow tone="onDark">Today</Eyebrow>
-          <h2 id="today-heading" className={styles.todayDate}>
-            {todayFormat.format(new Date())}
-          </h2>
-          <p className={styles.todayText}>
-            {readyCount} players free today
-            {readyNames.length > 0 ? `: ${readyNames.join(', ')} and others.` : '.'}
-          </p>
-          <p className={styles.skyline} aria-hidden="true">
-            <span>Wawel</span>
-            <span>Rynek Główny</span>
-            <span>Wisła</span>
-          </p>
-        </aside>
-      </section>
-
-      <section className={styles.updates} aria-labelledby="updates-heading">
-        <header className={styles.updatesHeader}>
-          <Eyebrow>Updates</Eyebrow>
-          <h2 id="updates-heading" className={styles.heading}>
-            Tennis today
-          </h2>
-        </header>
-
-        <div className={styles.updatesBody}>
-          <div className={styles.updatesMain}>
+          <section aria-labelledby="updates-heading">
+            <h2 id="updates-heading">
+              <VisuallyHidden>Latest updates</VisuallyHidden>
+            </h2>
             <ul className={styles.cards}>
-              <Card as="li" className={styles.card}>
-                <Eyebrow>Free today</Eyebrow>
-                <h3 className={styles.cardTitle}>{readyCount} players free today</h3>
-                <p className={styles.cardText}>
-                  {readyNames.length > 0
-                    ? `${readyNames.join(', ')} and others are free to play.`
-                    : 'Nobody has said they are free yet.'}
-                </p>
-              </Card>
-              {updateCards.map((card) => (
-                <Card as="li" key={card.title} className={styles.card}>
-                  <Eyebrow>{card.kind}</Eyebrow>
-                  <h3 className={styles.cardTitle}>{card.title}</h3>
-                  <p className={styles.cardText}>{card.text}</p>
-                </Card>
+              <UpdateCard
+                kind="Free today"
+                title={`${freeToday.count} players free today`}
+                text={`${names(freeToday.players)} and others near ${freeToday.neighborhood} are free to play.`}
+                faces={freeToday.players}
+                action={
+                  <ButtonLink href="/players" variant="solid" className={styles.cta}>
+                    See who
+                  </ButtonLink>
+                }
+              />
+              <UpdateCard
+                kind="Open games"
+                title={`${openGamesTonight.count} open games tonight`}
+                text={`${openGamesTonight.host} · ${openGamesTonight.time} at ${openGamesTonight.court}. More on the Players page.`}
+                faces={openGamesTonight.hosts}
+                action={
+                  <ButtonLink href="/players" variant="solid" className={styles.cta}>
+                    Join a game
+                  </ButtonLink>
+                }
+              />
+              {infoCards.map((card) => (
+                <UpdateCard
+                  key={card.title}
+                  kind={card.kind}
+                  title={card.title}
+                  text={card.text}
+                  faces={'faces' in card ? card.faces : undefined}
+                />
               ))}
             </ul>
+          </section>
 
-            <h3 className={styles.subheading}>Latest tennis stories</h3>
+          <section aria-labelledby="stories-heading">
+            <h2 id="stories-heading" className={styles.storiesLabel}>
+              Latest Kraków Tennis Stories
+            </h2>
             <ul className={styles.stories}>
               {stories.map((story) => (
-                <li key={story.title} className={styles.story}>
-                  <Eyebrow className={styles.storyPlace}>{story.place}</Eyebrow>
-                  <p className={styles.storyTitle}>{story.title}</p>
-                  <p className={styles.storyPeople}>{story.people}</p>
+                <li key={story.name} className={styles.story}>
+                  {story.name}
                 </li>
               ))}
             </ul>
-          </div>
-
-          <div className={styles.sidebar}>
-            <Card as="section" className={styles.panel} aria-labelledby="next-games-heading">
-              <Eyebrow as="h3" id="next-games-heading">
-                Your next games
-              </Eyebrow>
-              <ul className={styles.games}>
-                {nextGames.map((game) => (
-                  <li key={game.opponent} className={styles.game}>
-                    <span className={styles.date}>
-                      <Eyebrow as="span" className={styles.dateWeekday}>
-                        {game.weekday}
-                      </Eyebrow>
-                      <span className={styles.dateDay}>{game.day}</span>
-                    </span>
-                    <span className={styles.gameText}>
-                      <strong>{game.opponent}</strong>
-                      <span className={styles.cardText}>{game.details}</span>
-                      <Eyebrow
-                        as="span"
-                        className={game.status.startsWith('✓') ? styles.statusOk : styles.status}
-                      >
-                        {game.status}
-                      </Eyebrow>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card as="section" className={styles.panel} aria-labelledby="offers-heading">
-              <Eyebrow as="h3" id="offers-heading">
-                Offers from courts
-              </Eyebrow>
-              <ul className={styles.offers}>
-                {courtOffers.map((offer) => (
-                  <li key={offer.title} className={styles.offer}>
-                    <p className={styles.offerHead}>
-                      <span className={styles.initials}>{offer.initials}</span>
-                      <span className={styles.gameText}>
-                        <strong>{offer.title}</strong>
-                        <span className={styles.cardText}>{offer.venue}</span>
-                      </span>
-                    </p>
-                    <dl className={styles.rows}>
-                      {offer.rows.map(([label, value]) => (
-                        <div key={label} className={styles.row}>
-                          <dt>{label}</dt>
-                          <dd>{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <Eyebrow>{offer.spots}</Eyebrow>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </div>
+          </section>
         </div>
-      </section>
+
+        <div className={styles.side}>
+          <section className={styles.panel} aria-labelledby="next-games-heading">
+            <div className={styles.panelHead}>
+              <h2 id="next-games-heading" className={styles.panelTitle}>
+                Your next games
+              </h2>
+              <Link href="/calendar" className={styles.panelLink}>
+                Calendar →
+              </Link>
+            </div>
+            <NextGameList games={sampleNextGames} />
+          </section>
+
+          <section className={styles.panel} aria-labelledby="quick-actions-heading">
+            <h2 id="quick-actions-heading" className={styles.panelTitle}>
+              Quick actions
+            </h2>
+            <ul className={styles.actions}>
+              {quickActions.map((action) => (
+                <li key={action.label}>
+                  <Link href={action.href} className={styles.action}>
+                    <Icon name={action.icon} strokeWidth={2} className={styles.actionIcon} />
+                    {action.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={styles.panel} aria-labelledby="offers-heading">
+            <h2 id="offers-heading" className={styles.panelTitle}>
+              Offers from courts
+            </h2>
+            <ul className={styles.rows}>
+              {courtOffers.map((offer) => (
+                <li key={offer.title} className={styles.offer}>
+                  <p className={styles.details}>
+                    <strong>{offer.title}</strong>
+                    <span>{offer.details}</span>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

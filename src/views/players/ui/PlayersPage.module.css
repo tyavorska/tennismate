@@ -1,0 +1,55 @@
+/* Measurements follow the Let. players frame (1440 wide, 70 side padding). */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.625rem;
+  padding: 2.75rem var(--space-4) 4.5rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.eyebrow {
+  color: var(--peri-text);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  line-height: 1.5455;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: clamp(2.125rem, 1rem + 4.2vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+}
+
+.lead {
+  max-width: 28.75rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5333;
+}
+
+@media (min-width: 56.25rem) {
+  .page {
+    padding-inline: 4.375rem;
+  }
+
+  .header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+}

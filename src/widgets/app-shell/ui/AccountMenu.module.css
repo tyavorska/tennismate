@@ -6,11 +6,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.875rem 0.25rem 0.375rem;
+  padding: 0.1875rem 0.875rem 0.1875rem 0.1875rem;
   color: var(--cream);
   text-align: left;
   background: transparent;
-  border: var(--border-width) solid var(--cream-soft);
+  border: var(--border-width) solid var(--hero-line);
   border-radius: var(--radius-full);
 }
 
@@ -57,7 +57,7 @@
 /* Narrow screens: only the avatar shows. The name stays readable for screen readers. */
 @media (max-width: 40rem) {
   .trigger {
-    padding: 0.25rem;
+    padding: 0.1875rem;
   }
 
   .name {
@@ -68,4 +68,10 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
+}
+
+.itemIcon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
 }

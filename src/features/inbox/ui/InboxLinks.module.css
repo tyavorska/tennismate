@@ -1,0 +1,42 @@
+.link {
+  padding: 0;
+  color: var(--peri);
+  font-size: var(--text-btn);
+  font-weight: 800;
+  line-height: 1.3846;
+  background: none;
+}
+
+:global(:root[data-theme='dark']) .link {
+  color: var(--peri-hi);
+}
+
+.link[data-hovered] {
+  color: var(--foreground);
+  background: none;
+}
+
+.letsPlay {
+  --pill-y: 0.5rem;
+  --pill-x: 0.75rem;
+  --pill-size: var(--text-xs);
+  --pill-weight: 800;
+  --pill-lh: 1.3333;
+}
+
+/* Resets the button so a whole row can be the target; the caller lays out the row. */
+.chat {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  background: none;
+  border-radius: var(--radius);
+}
+
+.chat[data-hovered] {
+  color: inherit;
+  background: var(--accent-soft);
+}

@@ -4,7 +4,7 @@ import styles from './Button.module.css';
 
 type ButtonLinkProps = {
   href: string;
-  variant?: 'ball' | 'outlineOnDark';
+  variant?: 'ball' | 'solid' | 'outlineOnDark';
   className?: string;
   children: ReactNode;
 };

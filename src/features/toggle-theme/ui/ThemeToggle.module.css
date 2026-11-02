@@ -2,12 +2,12 @@
   display: inline-grid;
   flex-shrink: 0;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.375rem;
+  height: 2.25rem;
   color: var(--cream);
   cursor: pointer;
   background: transparent;
-  border: var(--border-width) solid var(--cream-soft);
+  border: var(--border-width) solid var(--hero-line);
   border-radius: var(--radius-full);
 }
 

@@ -61,16 +61,12 @@ describe('AppShell', () => {
       expect(screen.getByRole('button', { name: 'Tania' })).toBeInTheDocument();
     });
 
-    it('opens a menu with the profile link and sign out', async () => {
+    it('opens a menu with sign out', async () => {
       renderShell();
 
       await openAccountMenu();
 
       expect(screen.getByRole('menu', { name: 'Tania' })).toBeInTheDocument();
-      expect(screen.getByRole('menuitem', { name: 'Your profile' })).toHaveAttribute(
-        'href',
-        '/account',
-      );
       expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
     });
 

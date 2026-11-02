@@ -2,7 +2,7 @@
 
 import { firstNameOf, initialsOf, type Player } from '@/entities/player';
 import { useSignOut } from '@/features/sign-out';
-import { FormAlert, Menu, MenuItem, MenuSeparator } from '@/shared/ui';
+import { FormAlert, Menu, MenuItem } from '@/shared/ui';
 import styles from './AccountMenu.module.css';
 
 type AccountMenuProps = {
@@ -25,8 +25,6 @@ export function AccountMenu({ viewer }: AccountMenuProps) {
           </>
         }
       >
-        <MenuItem href="/account">Your profile</MenuItem>
-        <MenuSeparator />
         <MenuItem
           isDisabled={signOut.isPending}
           textValue="Sign out"

@@ -100,6 +100,9 @@ export const courtOffers = [
 ] as const satisfies readonly CourtOffer[];
 
 export const stories = [
-  { place: 'Ruczaj · 6–4', title: 'First set won', people: 'Natalia · Kuba' },
+  { place: 'Ruczaj · 6-4', title: 'First set won', people: 'Natalia · Kuba' },
   { place: 'Kazimierz Clay Club', title: 'Clay all winter', people: 'Marta · Dmytro' },
 ] as const satisfies readonly Story[];
+
+/** Figures shown next to the city until courts and districts have their own data. */
+export const courtCount = 38;

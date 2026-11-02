@@ -1,11 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { courts } from '@/entities/court';
-import { firstNameOf, formatRating, initialsOf, rankMatches } from '@/entities/player';
+import { firstNameOf, formatRating, initialsOf } from '@/entities/player';
 import { getViewer, listPlayers } from '@/server/players';
-import { ButtonLink, Card, Eyebrow } from '@/shared/ui';
-import { MatchFinder } from '@/widgets/match-finder';
-import { courtOffers, nextGames, stories, updateCards } from '../model/sampleUpdates';
+import { Card, Eyebrow } from '@/shared/ui';
+import { courtCount, courtOffers, nextGames, stories, updateCards } from '../model/sampleUpdates';
 import styles from './DashboardPage.module.css';
 
 const todayFormat = new Intl.DateTimeFormat('en-GB', {
@@ -19,12 +16,9 @@ export async function DashboardPage() {
   if (viewer === undefined) redirect('/sign-in');
 
   const players = listPlayers();
-  const matches = rankMatches(viewer, players);
-  const readyCount = matches.filter((match) => match.player.readyToPlay).length;
-  const readyNames = matches
-    .filter((match) => match.player.readyToPlay)
-    .slice(0, 3)
-    .map((match) => firstNameOf(match.player.name));
+  const ready = players.filter((player) => player.readyToPlay);
+  const readyCount = ready.length;
+  const readyNames = ready.slice(0, 3).map((player) => firstNameOf(player.name));
 
   return (
     <div className={styles.page}>
@@ -41,7 +35,7 @@ export async function DashboardPage() {
           </p>
           <p className={styles.meta}>
             <span className={styles.badge}>KRK</span>
-            Kraków, Poland · 9 districts · {courts.length} courts
+            Kraków, Poland · 9 districts · {courtCount} courts
           </p>
           <h1 id="home-heading" className={styles.title}>
             Let&apos;s <span className={styles.highlight}>play.</span>
@@ -50,11 +44,6 @@ export async function DashboardPage() {
             The tennis community in one place. Find a hitting partner at your level, see who&apos;s
             free near you today, post your own game and keep every booking in your calendar.
           </p>
-          <div className={styles.ctas}>
-            <ButtonLink href="#find-match-heading" className={styles.cta}>
-              Find a player
-            </ButtonLink>
-          </div>
 
           <dl className={styles.stats}>
             <div className={styles.stat}>
@@ -79,7 +68,7 @@ export async function DashboardPage() {
                   Courts
                 </Eyebrow>
               </dt>
-              <dd>{courts.length}</dd>
+              <dd>{courtCount}</dd>
             </div>
           </dl>
         </div>
@@ -93,9 +82,6 @@ export async function DashboardPage() {
             {readyCount} players free today
             {readyNames.length > 0 ? `: ${readyNames.join(', ')} and others.` : '.'}
           </p>
-          <ButtonLink href="#find-match-heading" className={styles.cta}>
-            See who&apos;s free
-          </ButtonLink>
           <p className={styles.skyline} aria-hidden="true">
             <span>Wawel</span>
             <span>Rynek Główny</span>
@@ -123,9 +109,6 @@ export async function DashboardPage() {
                     ? `${readyNames.join(', ')} and others are free to play.`
                     : 'Nobody has said they are free yet.'}
                 </p>
-                <Link href="#find-match-heading" className={styles.cardAction}>
-                  See who →
-                </Link>
               </Card>
               {updateCards.map((card) => (
                 <Card as="li" key={card.title} className={styles.card}>
@@ -207,10 +190,6 @@ export async function DashboardPage() {
           </div>
         </div>
       </section>
-
-      <div className={styles.finder}>
-        <MatchFinder matches={matches} />
-      </div>
     </div>
   );
 }

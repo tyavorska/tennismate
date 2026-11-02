@@ -90,17 +90,6 @@
   line-height: 1.5625;
 }
 
-.ctas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-}
-
-/* Figma: 10 / 18 padding. */
-.cta {
-  --pill-y: 0.625rem;
-}
-
 .stats {
   display: flex;
   flex-wrap: wrap;
@@ -222,13 +211,6 @@
 .cardText {
   color: var(--ink-soft);
   font-size: var(--text-sm);
-  line-height: 1.5714;
-}
-
-.cardAction {
-  color: var(--navy);
-  font-size: var(--text-sm);
-  font-weight: 700;
   line-height: 1.5714;
 }
 
@@ -385,10 +367,6 @@
   font-weight: 700;
 }
 
-.finder {
-  padding: 3.5rem var(--space-4);
-}
-
 :global(:root[data-theme='dark']) .updates {
   color: var(--cream);
   background: var(--navy-deep);
@@ -400,8 +378,7 @@
     padding: 3.5rem var(--site-pad);
   }
 
-  .updates,
-  .finder {
+  .updates {
     padding-inline: var(--site-pad);
   }
 

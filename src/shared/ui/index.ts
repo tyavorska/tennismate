@@ -10,6 +10,4 @@ export { Menu, MenuItem, MenuSeparator } from './menu/Menu';
 export { SocialAuth } from './social-auth/SocialAuth';
 export { FormTextField } from './text-field/FormTextField';
 export { TextField } from './text-field/TextField';
-export { ToggleChipGroup } from './toggle-chip-group/ToggleChipGroup';
-export type { ToggleChipOption } from './toggle-chip-group/ToggleChipGroup';
 export { VisuallyHidden } from './visually-hidden/VisuallyHidden';

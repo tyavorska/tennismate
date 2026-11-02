@@ -9,7 +9,7 @@ export function Header() {
         <LogoLink href="/" />
         <nav className={styles.nav} aria-label="Main">
           <ThemeToggle />
-          <ButtonLink href="/sign-in" variant="outlineOnDark" className={styles.login}>
+          <ButtonLink href="/#sign-in" variant="outlineOnDark" className={styles.login}>
             Log in
           </ButtonLink>
         </nav>

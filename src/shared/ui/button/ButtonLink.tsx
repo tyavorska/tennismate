@@ -14,6 +14,14 @@ export function ButtonLink({ href, variant = 'ball', className, children }: Butt
   const classes = [styles.button, styles.link, styles[variant], className]
     .filter(Boolean)
     .join(' ');
+  // Hash links stay native anchors so the page can react to them without a route change.
+  if (href.includes('#')) {
+    return (
+      <a href={href} className={classes}>
+        {children}
+      </a>
+    );
+  }
   return (
     <Link href={href} className={classes}>
       {children}

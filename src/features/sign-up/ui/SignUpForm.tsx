@@ -147,15 +147,7 @@ export function SignUpForm({ headingLevel = 2, onSwitch, layout = 'page' }: Sign
             Log in
           </button>
         )}{' '}
-        · By joining you accept the{' '}
-        <Link href="/terms" className={styles.link}>
-          terms
-        </Link>{' '}
-        and{' '}
-        <Link href="/privacy" className={styles.link}>
-          privacy policy
-        </Link>
-        .
+        · By joining you accept the terms and privacy policy .
       </p>
 
       <p className={styles.privacy}>

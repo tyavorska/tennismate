@@ -1,8 +1,12 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import type { Court } from '@/entities/court';
 import {
   formatRating,
+  openGameQueries,
+  playerQueries,
   type NtrpRating,
   type OpenGame,
   type PlayerListing,
@@ -18,13 +22,10 @@ import {
   type PlayerSort,
 } from '@/features/filter-players';
 import { LevelQuizDialog } from '@/features/level-quiz';
-import {
-  gameFromOffer,
-  OfferGameDialog,
-  type CourtOption,
-  type OfferGameInput,
-} from '@/features/offer-game';
-import { toggleMember, useUrlFlag } from '@/shared/lib';
+import { useToggleJoin } from '@/features/join-game';
+import { OfferGameDialog, useRemoveGame } from '@/features/offer-game';
+import { useToggleSaved } from '@/features/save-player';
+import { useUrlFlag } from '@/shared/lib';
 import {
   Button,
   CountBadge,
@@ -40,8 +41,7 @@ import styles from './PlayerFinder.module.css';
 
 type PlayerFinderProps = {
   players: readonly PlayerListing[];
-  games: readonly OpenGame[];
-  courts: readonly CourtOption[];
+  courts: readonly Court[];
   viewerRating: NtrpRating;
   /** Sidebar rendered next to the lists, such as the inbox and next games. */
   aside: ReactNode;
@@ -105,12 +105,15 @@ function Arrows({ label, onScroll }: ArrowsProps) {
   );
 }
 
-export function PlayerFinder({ players, games, courts, viewerRating, aside }: PlayerFinderProps) {
+export function PlayerFinder({ players, courts, viewerRating, aside }: PlayerFinderProps) {
   const { filters, setFilters, clear } = usePlayerFilters();
   const [myRating, setMyRating] = useState(viewerRating);
-  const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(new Set());
-  const [joinedIds, setJoinedIds] = useState<ReadonlySet<string>>(new Set());
-  const [myGames, setMyGames] = useState<readonly OpenGame[]>([]);
+  const { data: games = [] } = useQuery(openGameQueries.list());
+  const { data: savedList = [] } = useQuery(playerQueries.saved());
+  const savedIds: ReadonlySet<string> = new Set(savedList);
+  const toggleSavedPlayer = useToggleSaved();
+  const toggleJoinedGame = useToggleJoin();
+  const removeMyGame = useRemoveGame();
   const [showAll, setShowAll] = useState(false);
   const [sort, setSort] = useState<PlayerSort>('fit');
   // Both dialogs live in the URL (`?offer=1`, `?quiz=1`), so links and the back button can open and close them.
@@ -123,31 +126,47 @@ export function PlayerFinder({ players, games, courts, viewerRating, aside }: Pl
   const context = { viewerRating: myRating, savedIds, courts };
   const effectiveSort = filters.lists.has('closestToYou') ? 'distance' : sort;
   const matchedPlayers = sortPlayers(filterPlayers(players, filters, context), effectiveSort);
-  const matchedGames = [...myGames, ...filterGames(games, filters, context)];
+  const matchedGames = filterGames(games, filters, context);
 
-  function post(offer: OfferGameInput): void {
-    const game = gameFromOffer(offer, courts, `mine-${myGames.length + 1}`);
-    if (game === undefined) return;
-    setMyGames([game, ...myGames]);
+  function announcePosted(game: OpenGame): void {
     setAnnouncement(`Your game at ${game.court} is now visible to players.`);
   }
 
-  function removeGame(id: string): void {
-    setMyGames(myGames.filter((game) => game.id !== id));
-    setAnnouncement('Your game was removed.');
+  function removeGame(game: OpenGame): void {
+    removeMyGame.mutate(game.id, {
+      onSuccess: () => setAnnouncement('Your game was removed.'),
+      onError: (error) => setAnnouncement(`Your game was not removed. ${error.message}`),
+    });
   }
 
   function toggleSaved(player: PlayerListing): void {
     const saved = !savedIds.has(player.id);
-    setSavedIds(toggleMember(savedIds, player.id));
-    setAnnouncement(saved ? `${player.name} saved.` : `${player.name} removed from saved players.`);
+    toggleSavedPlayer.mutate(
+      { id: player.id, saved },
+      {
+        onSuccess: () =>
+          setAnnouncement(
+            saved ? `${player.name} saved.` : `${player.name} removed from saved players.`,
+          ),
+        onError: (error) => setAnnouncement(`${player.name} was not updated. ${error.message}`),
+      },
+    );
   }
 
   function toggleJoin(game: OpenGame): void {
-    const joined = !joinedIds.has(game.id);
-    setJoinedIds(toggleMember(joinedIds, game.id));
-    setAnnouncement(
-      joined ? `You joined the game at ${game.court}.` : `You left the game at ${game.court}.`,
+    const joined = !game.isJoined;
+    toggleJoinedGame.mutate(
+      { id: game.id, joined },
+      {
+        onSuccess: () =>
+          setAnnouncement(
+            joined
+              ? `You joined the game at ${game.court}.`
+              : `You left the game at ${game.court}.`,
+          ),
+        onError: (error) =>
+          setAnnouncement(`You did not ${joined ? 'join' : 'leave'} the game. ${error.message}`),
+      },
     );
   }
 
@@ -243,9 +262,12 @@ export function PlayerFinder({ players, games, courts, viewerRating, aside }: Pl
                     <OpenGameCard
                       key={game.id}
                       game={game}
-                      isJoined={joinedIds.has(game.id)}
+                      isPending={
+                        (toggleJoinedGame.isPending && toggleJoinedGame.variables.id === game.id) ||
+                        (removeMyGame.isPending && removeMyGame.variables === game.id)
+                      }
                       onToggleJoin={() => toggleJoin(game)}
-                      onRemove={() => removeGame(game.id)}
+                      onRemove={() => removeGame(game)}
                     />
                   ))}
                 </ul>
@@ -263,7 +285,7 @@ export function PlayerFinder({ players, games, courts, viewerRating, aside }: Pl
         viewerRating={myRating}
         courts={courts}
         ratings={ladderRungs}
-        onPost={post}
+        onPosted={announcePosted}
       />
 
       <LevelQuizDialog

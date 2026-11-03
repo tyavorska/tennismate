@@ -1,3 +1,4 @@
+import type { Court } from '@/entities/court';
 import {
   ntrpRatingSchema,
   type MatchTime,
@@ -46,7 +47,7 @@ export type PlayerFilters = Readonly<{
   lists: ReadonlySet<ListId>;
 }>;
 
-export type CourtRef = Readonly<{ name: string; district: string }>;
+export type CourtRef = Court;
 
 export type FilterContext = Readonly<{
   viewerRating: NtrpRating;

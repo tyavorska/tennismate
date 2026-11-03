@@ -1,54 +1,9 @@
-import { z } from 'zod';
+import { calendarEventSchema, freePlayerSchema } from '@/entities/game';
+import type { CalendarEvent, FreePlayer } from '@/entities/game';
+import { addDays, isoDateSchema, toUtc, weekdayIndex, type IsoDate } from '@/shared/lib';
 
-/** A calendar date as `YYYY-MM-DD`. Parsed, never asserted. */
-export const isoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .brand<'IsoDate'>();
-export type IsoDate = z.infer<typeof isoDateSchema>;
-
-const timeSchema = z.string().regex(/^\d{2}:\d{2}$/);
-
-export const calendarEventSchema = z.discriminatedUnion('kind', [
-  z.object({
-    id: z.string().min(1),
-    kind: z.literal('game'),
-    date: isoDateSchema,
-    time: timeSchema,
-    title: z.string().min(1),
-    court: z.string().min(1),
-    confirmed: z.boolean(),
-  }),
-  z.object({
-    id: z.string().min(1),
-    kind: z.literal('tournament'),
-    date: isoDateSchema,
-    name: z.string().min(1),
-    venue: z.string().min(1),
-  }),
-  z.object({
-    id: z.string().min(1),
-    kind: z.literal('open'),
-    date: isoDateSchema,
-    time: timeSchema,
-    host: z.string().min(1),
-    court: z.string().min(1),
-    format: z.string().min(1),
-  }),
-]);
-export type CalendarEvent = Readonly<z.infer<typeof calendarEventSchema>>;
-
-/** Weekdays are 0 (Monday) to 6 (Sunday). */
-export const freePlayerSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  initials: z.string().min(1),
-  rating: z.number(),
-  window: z.string().min(1),
-  district: z.string().min(1),
-  weekdays: z.array(z.number().int().min(0).max(6)).readonly(),
-});
-export type FreePlayer = Readonly<z.infer<typeof freePlayerSchema>>;
+export { addDays, calendarEventSchema, freePlayerSchema, isoDateSchema, weekdayIndex };
+export type { CalendarEvent, FreePlayer, IsoDate };
 
 export type CalendarDay = {
   readonly iso: IsoDate;
@@ -86,19 +41,6 @@ const weekdayLongNames = [
 const dayMs = 86_400_000;
 const daysShown = 35;
 
-function toUtc(iso: IsoDate): Date {
-  const [year = 0, month = 1, day = 1] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
-}
-
-function fromUtc(date: Date): IsoDate {
-  return isoDateSchema.parse(date.toISOString().slice(0, 10));
-}
-
-export function addDays(iso: IsoDate, days: number): IsoDate {
-  return fromUtc(new Date(toUtc(iso).getTime() + days * dayMs));
-}
-
 /** The week offset that brings a day into view: 0 when it is already within the five weeks shown. */
 export function weekOffsetFor(todayIso: IsoDate, iso: IsoDate): number {
   const start = addDays(todayIso, -weekdayIndex(todayIso));
@@ -106,14 +48,18 @@ export function weekOffsetFor(todayIso: IsoDate, iso: IsoDate): number {
   return diff >= 0 && diff < daysShown ? 0 : Math.floor(diff / 7);
 }
 
-/** 0 for Monday up to 6 for Sunday. */
-export function weekdayIndex(iso: IsoDate): number {
-  return (toUtc(iso).getUTCDay() + 6) % 7;
+/** The first and last day of the five weeks shown, moved by whole weeks. */
+export function visibleRange(
+  todayIso: IsoDate,
+  weekOffset: number,
+): Readonly<{ from: IsoDate; to: IsoDate }> {
+  const from = addDays(todayIso, -weekdayIndex(todayIso) + weekOffset * 7);
+  return { from, to: addDays(from, daysShown - 1) };
 }
 
 /** The 35 days shown: five weeks starting on the Monday of the current week, moved by whole weeks. */
 export function buildDays(todayIso: IsoDate, weekOffset: number): readonly CalendarDay[] {
-  const start = addDays(todayIso, -weekdayIndex(todayIso) + weekOffset * 7);
+  const start = visibleRange(todayIso, weekOffset).from;
   return Array.from({ length: daysShown }, (_, index) => {
     const iso = addDays(start, index);
     const date = toUtc(iso);

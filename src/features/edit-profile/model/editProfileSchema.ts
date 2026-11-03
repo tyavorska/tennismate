@@ -1,11 +1,7 @@
-import { z } from 'zod';
-import { ntrpRatingSchema, type Player } from '@/entities/player';
+import type { z } from 'zod';
+import { profileUpdateSchema, type Player } from '@/entities/player';
 
-export const editProfileSchema = z.object({
-  name: z.string().trim().min(1, 'Enter your name'),
-  neighborhood: z.string().trim().min(1, 'Enter your home district'),
-  rating: ntrpRatingSchema,
-});
+export const editProfileSchema = profileUpdateSchema;
 
 export type EditProfileInput = z.input<typeof editProfileSchema>;
 

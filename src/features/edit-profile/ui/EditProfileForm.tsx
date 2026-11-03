@@ -5,40 +5,81 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from 'react-aria-components';
 import { Controller, useForm } from 'react-hook-form';
 import type { Player } from '@/entities/player';
-import { Button, FormTextField, SelectField, type SelectOption } from '@/shared/ui';
+import { applyFieldErrors, messagesForFields } from '@/shared/lib';
+import { Button, FormAlert, FormTextField, SelectField, type SelectOption } from '@/shared/ui';
 import {
   editProfileDefaults,
   editProfileSchema,
   type EditProfileInput,
 } from '../model/editProfileSchema';
+import { useUpdateProfile } from '../model/useUpdateProfile';
 import styles from './EditProfileForm.module.css';
 
 type EditProfileFormProps = {
   viewer: Player;
+  districts: readonly string[];
 };
+
+const fields = ['name', 'neighborhood', 'rating'] as const;
+// The selects cannot show an error themselves, so their messages go in the alert above the button.
+const selectFields = ['neighborhood', 'rating'] as const;
 
 const ratingOptions: readonly SelectOption[] = Array.from({ length: 13 }, (_, step) => {
   const rating = 1 + step * 0.5;
   return { id: String(rating), label: rating.toFixed(1) };
 });
 
-export function EditProfileForm({ viewer }: EditProfileFormProps) {
+export function EditProfileForm({ viewer, districts }: EditProfileFormProps) {
   const [saved, setSaved] = useState(false);
-  const { control, handleSubmit, reset, formState } = useForm<EditProfileInput>({
+  const updateProfile = useUpdateProfile();
+  const { control, handleSubmit, reset, setError, formState } = useForm<EditProfileInput>({
     resolver: zodResolver(editProfileSchema),
     defaultValues: editProfileDefaults(viewer),
     mode: 'onTouched',
   });
 
+  const districtOptions: readonly SelectOption[] = districts.map((name) => ({
+    id: name,
+    label: name,
+  }));
+
   function onSubmit(values: EditProfileInput): void {
-    reset(values);
-    setSaved(true);
+    if (updateProfile.isPending) return;
+    const parsed = editProfileSchema.safeParse(values);
+    if (!parsed.success) return;
+    setSaved(false);
+    updateProfile.mutate(parsed.data, {
+      onSuccess: () => {
+        reset(values);
+        setSaved(true);
+      },
+      onError: (error) => applyFieldErrors(error.fieldErrors, fields, setError),
+    });
   }
+
+  const error = updateProfile.error;
+  const formMessage =
+    error === null
+      ? ''
+      : error.kind === 'validation'
+        ? messagesForFields(error.fieldErrors, selectFields)
+        : `${error.message} Your changes were not saved.`;
 
   return (
     <Form className={styles.form} onSubmit={handleSubmit(onSubmit)} validationBehavior="aria">
       <FormTextField control={control} name="name" label="Name" autoComplete="name" />
-      <FormTextField control={control} name="neighborhood" label="Home district" />
+      <Controller
+        control={control}
+        name="neighborhood"
+        render={({ field }) => (
+          <SelectField
+            label="Home district"
+            options={districtOptions}
+            value={field.value}
+            onChange={field.onChange}
+          />
+        )}
+      />
       <Controller
         control={control}
         name="rating"
@@ -54,8 +95,19 @@ export function EditProfileForm({ viewer }: EditProfileFormProps) {
         )}
       />
 
-      <Button type="submit" variant="solid" className={styles.submit}>
-        Save changes
+      {error !== null && formMessage !== '' && (
+        <FormAlert referenceId={error.kind === 'server' ? error.requestId : undefined}>
+          {formMessage}
+        </FormAlert>
+      )}
+
+      <Button
+        type="submit"
+        variant="solid"
+        className={styles.submit}
+        isPending={updateProfile.isPending}
+      >
+        {updateProfile.isPending ? 'Saving…' : 'Save changes'}
       </Button>
 
       <p className={styles.status} role="status">

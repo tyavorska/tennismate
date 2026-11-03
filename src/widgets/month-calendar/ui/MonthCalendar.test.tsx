@@ -1,8 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { sampleConversations } from '@/entities/conversation';
 import { InboxProvider } from '@/features/inbox';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { calendarQueries } from '@/entities/game';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing';
 import {
   calendarEventSchema,
   freePlayerSchema,
@@ -10,6 +12,8 @@ import {
   type CalendarEvent,
   type FreePlayer,
   type IsoDate,
+  visibleRange,
+  weekOffsetFor,
 } from '../index';
 import { MonthCalendar } from './MonthCalendar';
 
@@ -73,16 +77,28 @@ const freePlayers: readonly FreePlayer[] = [
   }),
 ];
 
+afterEach(() => vi.unstubAllGlobals());
+
+function respondWith(response: () => Response): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => response()),
+  );
+}
+
 function renderCalendar(initialDay?: IsoDate): ReturnType<typeof userEvent.setup> {
-  render(
+  respondWith(() => new Response(JSON.stringify(events)));
+  const client = createTestQueryClient();
+  const { from, to } = visibleRange(
+    today,
+    initialDay === undefined ? 0 : weekOffsetFor(today, initialDay),
+  );
+  client.setQueryData(calendarQueries.range(from, to).queryKey, events);
+  renderWithQuery(
     <InboxProvider conversations={sampleConversations}>
-      <MonthCalendar
-        todayIso={today}
-        events={events}
-        freePlayers={freePlayers}
-        initialDay={initialDay}
-      />
+      <MonthCalendar todayIso={today} freePlayers={freePlayers} initialDay={initialDay} />
     </InboxProvider>,
+    client,
   );
   return userEvent.setup();
 }
@@ -257,6 +273,33 @@ describe('MonthCalendar', () => {
         'href',
         '/players?offer=1',
       );
+    });
+  });
+
+  describe('loading the games', () => {
+    it('keeps the weeks already shown and offers a retry when the next weeks fail to load', async () => {
+      const user = renderCalendar();
+      respondWith(() => new Response(JSON.stringify({ kind: 'server' }), { status: 500 }));
+
+      await user.click(screen.getByRole('button', { name: 'Next week' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        "We couldn't refresh your games. These may be out of date.",
+      );
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+      expect(day(/^Wed, 11 Nov/)).toHaveAccessibleName(/18:00 Ewa L\./);
+    });
+
+    it('loads the games again when you press "Try again"', async () => {
+      const user = renderCalendar();
+      respondWith(() => new Response(JSON.stringify({ kind: 'server' }), { status: 500 }));
+      await user.click(screen.getByRole('button', { name: 'Next week' }));
+      await user.click(await screen.findByRole('button', { name: 'Try again' }));
+      respondWith(() => new Response(JSON.stringify(events)));
+
+      await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+      await vi.waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
     });
   });
 });

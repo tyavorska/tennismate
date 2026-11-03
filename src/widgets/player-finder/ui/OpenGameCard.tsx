@@ -10,13 +10,13 @@ import styles from './OpenGameCard.module.css';
 
 type OpenGameCardProps = {
   game: OpenGame;
-  isJoined: boolean;
+  isPending: boolean;
   onToggleJoin: () => void;
   onRemove: () => void;
 };
 
-export function OpenGameCard({ game, isJoined, onToggleJoin, onRemove }: OpenGameCardProps) {
-  const spots = game.spotsOpen - (isJoined ? 1 : 0);
+export function OpenGameCard({ game, isPending, onToggleJoin, onRemove }: OpenGameCardProps) {
+  const { isJoined, spotsOpen: spots } = game;
   const classes = [styles.card, game.isMine ? styles.mine : ''].filter(Boolean).join(' ');
 
   return (
@@ -51,7 +51,12 @@ export function OpenGameCard({ game, isJoined, onToggleJoin, onRemove }: OpenGam
           {game.isMine ? 'Visible to players' : formatSpots(spots)}
         </span>
         {game.isMine ? (
-          <Button variant="outline" className={styles.action} onPress={onRemove}>
+          <Button
+            variant="outline"
+            className={styles.action}
+            isDisabled={isPending}
+            onPress={onRemove}
+          >
             Remove
           </Button>
         ) : (
@@ -59,7 +64,7 @@ export function OpenGameCard({ game, isJoined, onToggleJoin, onRemove }: OpenGam
             variant={isJoined ? 'outline' : 'ball'}
             className={styles.action}
             aria-pressed={isJoined}
-            isDisabled={spots === 0 && !isJoined}
+            isDisabled={isPending || (spots === 0 && !isJoined)}
             onPress={onToggleJoin}
           >
             {isJoined ? 'Joined' : 'Join game'}

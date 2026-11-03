@@ -1,6 +1,8 @@
 'use client';
 
+import { keepPreviousData, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useState, type Key } from 'react';
+import { calendarQueries } from '@/entities/game';
 import { Button, Icon, ToggleGroup, ToggleItem } from '@/shared/ui';
 import {
   buildDays,
@@ -14,6 +16,7 @@ import {
   type CalendarEvent,
   type FreePlayer,
   type IsoDate,
+  visibleRange,
   weekOffsetFor,
 } from '../model/calendar';
 import { DayPanel } from './DayPanel';
@@ -31,7 +34,6 @@ const facesShown = 3;
 
 type MonthCalendarProps = {
   todayIso: IsoDate;
-  events: readonly CalendarEvent[];
   freePlayers: readonly FreePlayer[];
   /** The day to select on arrival, such as when a game was opened from a list. Today when absent. */
   initialDay?: IsoDate;
@@ -54,6 +56,15 @@ function dayLabel(
   if (hasNote) parts.push('note');
   const when = `${formatDay(day.iso)}${day.isToday ? ', today' : ''}`;
   return parts.length === 0 ? when : `${when}: ${parts.join('; ')}`;
+}
+
+function loadedEventsOf(
+  ranges: ReadonlyArray<readonly [QueryKey, readonly CalendarEvent[] | undefined]>,
+): readonly CalendarEvent[] {
+  const byId = new Map(
+    ranges.flatMap(([, events]) => events ?? []).map((event) => [event.id, event]),
+  );
+  return [...byId.values()];
 }
 
 type EventChipsProps = { events: readonly CalendarEvent[]; hasNote: boolean };
@@ -89,13 +100,25 @@ function EventChips({ events, hasNote }: EventChipsProps) {
   );
 }
 
-export function MonthCalendar({ todayIso, events, freePlayers, initialDay }: MonthCalendarProps) {
+export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalendarProps) {
   const [weekOffset, setWeekOffset] = useState(() =>
     initialDay === undefined ? 0 : weekOffsetFor(todayIso, initialDay),
   );
   const [selectedIso, setSelectedIso] = useState(initialDay ?? todayIso);
   const [notes, setNotes] = useState<Readonly<Record<string, string>>>({});
   const days = buildDays(todayIso, weekOffset);
+  const { from, to } = visibleRange(todayIso, weekOffset);
+  const queryClient = useQueryClient();
+  // Keeps showing the weeks already loaded while the next ones arrive.
+  const eventsQuery = useQuery({
+    ...calendarQueries.range(from, to),
+    placeholderData: keepPreviousData,
+  });
+  // The weeks overlap, so when new ones fail to load the days already fetched can still be shown.
+  const loadedEvents = loadedEventsOf(
+    queryClient.getQueriesData<readonly CalendarEvent[]>(calendarQueries.all()),
+  );
+  const events = eventsQuery.data ?? loadedEvents;
 
   function select(keys: Set<Key>): void {
     const [key] = keys;
@@ -140,6 +163,17 @@ export function MonthCalendar({ todayIso, events, freePlayers, initialDay }: Mon
           </div>
         </div>
 
+        {eventsQuery.isError && (
+          <p className={styles.notice} role="status">
+            {loadedEvents.length === 0
+              ? "We couldn't load your games."
+              : "We couldn't refresh your games. These may be out of date."}
+            <Button variant="outline" onPress={() => void eventsQuery.refetch()}>
+              Try again
+            </Button>
+          </p>
+        )}
+
         <div className={styles.weekdays} aria-hidden="true">
           {weekdayHeads.map((name) => (
             <span key={name} className={styles.weekday}>
@@ -152,6 +186,7 @@ export function MonthCalendar({ todayIso, events, freePlayers, initialDay }: Mon
         <ToggleGroup
           className={styles.grid}
           aria-label="Day"
+          aria-busy={eventsQuery.isFetching}
           selectedKeys={[selectedIso]}
           onSelectionChange={select}
         >

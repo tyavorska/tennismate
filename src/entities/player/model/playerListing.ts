@@ -11,7 +11,7 @@ export type MatchTime = z.infer<typeof matchTimeSchema>;
 export const playerListingSchema = z.object({
   id: playerIdSchema,
   name: z.string().min(1),
-  age: z.number().int().positive(),
+  age: z.number().int().positive().optional(),
   rating: ntrpRatingSchema,
   district: z.string().min(1),
   distanceKm: z.number().nonnegative(),

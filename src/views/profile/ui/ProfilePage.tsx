@@ -10,9 +10,10 @@ import styles from './ProfilePage.module.css';
 type ProfilePageProps = {
   viewer: Player;
   email: string;
+  districts: readonly string[];
 };
 
-export function ProfilePage({ viewer, email }: ProfilePageProps) {
+export function ProfilePage({ viewer, email, districts }: ProfilePageProps) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -44,7 +45,7 @@ export function ProfilePage({ viewer, email }: ProfilePageProps) {
             <h2 id="edit-profile" className={styles.sectionTitle}>
               Edit profile
             </h2>
-            <EditProfileForm viewer={viewer} />
+            <EditProfileForm viewer={viewer} districts={districts} />
           </section>
 
           <section className={styles.section} aria-labelledby="change-password">

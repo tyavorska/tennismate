@@ -12,14 +12,7 @@ const viewer = playerSchema.parse({
   id: '2f1c6c8e-9a43-4b8b-9a55-0f6a7b3a1d10',
   name: 'Tania Ivanova',
   rating: 2,
-  about: '',
-  neighborhood: 'Center City',
-  location: { latitude: 39.9526, longitude: -75.1652 },
-  lastActiveDaysAgo: 0,
-  gamesPlayed: 0,
-  readyToPlay: false,
-  playTimes: [],
-  homeCourts: [],
+  neighborhood: 'Stare Miasto',
 });
 
 function renderShell(): void {

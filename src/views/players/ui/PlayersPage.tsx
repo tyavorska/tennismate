@@ -1,14 +1,16 @@
+import type { Court } from '@/entities/court';
+import type { NtrpRating, PlayerListing } from '@/entities/player';
 import { PlayerFinder } from '@/widgets/player-finder';
-import {
-  sampleCourts,
-  sampleGames,
-  samplePlayers,
-  sampleViewerRating,
-} from '../model/samplePlayers';
 import { PlayersAside } from './PlayersAside';
 import styles from './PlayersPage.module.css';
 
-export function PlayersPage() {
+type PlayersPageProps = {
+  players: readonly PlayerListing[];
+  courts: readonly Court[];
+  viewerRating: NtrpRating;
+};
+
+export function PlayersPage({ players, courts, viewerRating }: PlayersPageProps) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -22,10 +24,9 @@ export function PlayersPage() {
       </header>
 
       <PlayerFinder
-        players={samplePlayers}
-        games={sampleGames}
-        courts={sampleCourts}
-        viewerRating={sampleViewerRating}
+        players={players}
+        courts={courts}
+        viewerRating={viewerRating}
         aside={<PlayersAside />}
       />
     </div>

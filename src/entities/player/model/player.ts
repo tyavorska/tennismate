@@ -7,43 +7,20 @@ export type PlayerId = z.infer<typeof playerIdSchema>;
 export const ntrpRatingSchema = z.number().min(1).max(7).multipleOf(0.5).brand<'NtrpRating'>();
 export type NtrpRating = z.infer<typeof ntrpRatingSchema>;
 
-export const playTimeSchema = z.enum([
-  'weekdayMorning',
-  'weekdayDaytime',
-  'weekdayEvening',
-  'weekends',
-  'flexible',
-]);
-export type PlayTime = z.infer<typeof playTimeSchema>;
-
-export const geoPointSchema = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(1, 'Enter your name'),
+  neighborhood: z.string().trim().min(1, 'Enter your home district'),
+  rating: ntrpRatingSchema,
 });
-export type GeoPoint = z.infer<typeof geoPointSchema>;
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 
 export const playerSchema = z.object({
   id: playerIdSchema,
   name: z.string().min(1),
   rating: ntrpRatingSchema,
-  about: z.string(),
   neighborhood: z.string().min(1),
-  location: geoPointSchema,
-  lastActiveDaysAgo: z.number().int().nonnegative(),
-  gamesPlayed: z.number().int().nonnegative(),
-  readyToPlay: z.boolean(),
-  playTimes: z.array(playTimeSchema).readonly(),
-  homeCourts: z.array(z.string().min(1)).readonly(),
 });
 export type Player = Readonly<z.infer<typeof playerSchema>>;
-
-export const playTimeLabels = {
-  weekdayMorning: 'Weekday mornings',
-  weekdayDaytime: 'Weekday daytime',
-  weekdayEvening: 'Weekday evenings',
-  weekends: 'Weekends',
-  flexible: 'Flexible',
-} as const satisfies Record<PlayTime, string>;
 
 // Lowest rating for each level, in ascending order.
 const levels = [

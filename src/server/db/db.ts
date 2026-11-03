@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { serverEnv } from '../config/env';
+import { seedDemoData, seedReferenceData } from './seed';
 
 const schema = `
   CREATE TABLE IF NOT EXISTS users (
@@ -20,13 +21,83 @@ const schema = `
   );
 
   CREATE INDEX IF NOT EXISTS sessions_user_id ON sessions(user_id);
+
+  CREATE TABLE IF NOT EXISTS districts (
+    name TEXT PRIMARY KEY,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS courts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    district TEXT NOT NULL REFERENCES districts(name)
+  );
+
+  CREATE TABLE IF NOT EXISTS profiles (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    district TEXT NOT NULL REFERENCES districts(name),
+    rating REAL NOT NULL,
+    age INTEGER,
+    play_style TEXT,
+    formats TEXT NOT NULL,
+    times TEXT NOT NULL,
+    free_tonight INTEGER NOT NULL DEFAULT 0,
+    wants_doubles_partner INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS saved_players (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, player_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS games (
+    id TEXT PRIMARY KEY,
+    host_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    court_id INTEGER NOT NULL REFERENCES courts(id),
+    starts_at TEXT NOT NULL,
+    format TEXT NOT NULL,
+    rating REAL NOT NULL,
+    spots INTEGER NOT NULL CHECK (spots >= 1),
+    looking_for TEXT NOT NULL,
+    note TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS games_starts_at ON games(starts_at);
+
+  CREATE TABLE IF NOT EXISTS game_participants (
+    game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    joined_at TEXT NOT NULL,
+    PRIMARY KEY (game_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS tournaments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    court_id INTEGER NOT NULL REFERENCES courts(id),
+    date TEXT NOT NULL
+  );
 `;
 
 function openDatabase(path: string): DatabaseSync {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const database = new DatabaseSync(path);
   database.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  return database;
+}
+
+// Safe to repeat, so a reused connection also picks up tables and data added since it was opened.
+function initialize(database: DatabaseSync): DatabaseSync {
   database.exec(schema);
+  seedReferenceData(database);
+  if (serverEnv.NODE_ENV === 'development') seedDemoData(database, new Date());
   return database;
 }
 
@@ -35,6 +106,8 @@ declare global {
   var tennismateDb: DatabaseSync | undefined;
 }
 
-export const db: DatabaseSync = globalThis.tennismateDb ?? openDatabase(serverEnv.DATABASE_PATH);
+export const db: DatabaseSync = initialize(
+  globalThis.tennismateDb ?? openDatabase(serverEnv.DATABASE_PATH),
+);
 
 if (serverEnv.NODE_ENV !== 'production') globalThis.tennismateDb = db;

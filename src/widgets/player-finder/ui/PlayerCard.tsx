@@ -32,10 +32,12 @@ export function PlayerCard({ player, isSaved, onToggleSave }: PlayerCardProps) {
       <div className={styles.body}>
         <div className={styles.nameRow}>
           <h3 className={styles.name}>{player.name}</h3>
-          <span className={styles.age}>
-            <VisuallyHidden>Age </VisuallyHidden>
-            {player.age}
-          </span>
+          {player.age !== undefined && (
+            <span className={styles.age}>
+              <VisuallyHidden>Age </VisuallyHidden>
+              {player.age}
+            </span>
+          )}
         </div>
         <p className={styles.sub}>
           {player.online && (

@@ -5,6 +5,7 @@ export {
   freePlayerSchema,
   isoDateSchema,
   weekdayIndex,
+  visibleRange,
   weekOffsetFor,
 } from './model/calendar';
 export type { CalendarEvent, FreePlayer, IsoDate } from './model/calendar';

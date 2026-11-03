@@ -1,7 +1,15 @@
 import { sampleConversations } from '@/entities/conversation';
+import {
+  ntrpRatingSchema,
+  openGameQueries,
+  openGameSchema,
+  playerListingSchema,
+  playerQueries,
+} from '@/entities/player';
 import { InboxProvider } from '@/features/inbox';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing';
 import userEvent from '@testing-library/user-event';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PlayersPage } from '../index';
 
@@ -10,11 +18,61 @@ vi.mock('next/navigation', async () => {
   return createNavigation('/players').module;
 });
 
+function listing(id: string, name: string, rating: number, fitPercent: number) {
+  return playerListingSchema.parse({
+    id,
+    name,
+    age: 30,
+    rating,
+    district: 'Kazimierz',
+    distanceKm: 1,
+    fitPercent,
+    playStyle: 'Match play',
+    formats: ['singles'],
+    times: [],
+    freeTonight: false,
+    online: false,
+    isNew: false,
+    wantsDoublesPartner: false,
+  });
+}
+
+const players = [
+  listing('marta', 'Marta K.', 3.5, 94),
+  listing('piotr', 'Piotr W.', 3.5, 91),
+  listing('ola', 'Ola N.', 3, 88),
+  listing('kuba', 'Kuba S.', 4, 86),
+  listing('hanna', 'Hanna V.', 5, 62),
+];
+
+const courts = [{ name: 'Kazimierz Clay Club', district: 'Kazimierz' }];
+
+const games = ['Piotr W.', 'Ola N.', 'Kuba S.'].map((host, index) =>
+  openGameSchema.parse({
+    id: `game-${index}`,
+    hostName: host,
+    hostInitials: host.slice(0, 2),
+    rating: 3.5,
+    format: 'singles',
+    day: 'Today',
+    time: '19:00',
+    court: 'Kazimierz Clay Club',
+    district: 'Kazimierz',
+    spotsOpen: 1,
+    isMine: false,
+    isJoined: false,
+  }),
+);
+
 function renderPage(): void {
-  render(
+  const client = createTestQueryClient();
+  client.setQueryData(openGameQueries.list().queryKey, games);
+  client.setQueryData(playerQueries.saved().queryKey, []);
+  renderWithQuery(
     <InboxProvider conversations={sampleConversations}>
-      <PlayersPage />
+      <PlayersPage players={players} courts={courts} viewerRating={ntrpRatingSchema.parse(3.5)} />
     </InboxProvider>,
+    client,
   );
 }
 
@@ -47,7 +105,7 @@ describe('PlayersPage', () => {
     expect(names).toEqual(['Marta K.', 'Piotr W.', 'Ola N.', 'Kuba S.']);
   });
 
-  it('shows the three sample open games', () => {
+  it('shows the open games', () => {
     renderPage();
 
     const games = screen.getByRole('region', { name: /Open games/ });

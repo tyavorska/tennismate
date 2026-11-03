@@ -1,16 +1,14 @@
 export { formatRating } from './lib/format';
 export {
   firstNameOf,
-  geoPointSchema,
   initialsOf,
   levelOf,
   ntrpRatingSchema,
   playerIdSchema,
   playerSchema,
-  playTimeLabels,
-  playTimeSchema,
+  profileUpdateSchema,
 } from './model/player';
-export type { GeoPoint, NtrpRating, Player, PlayerId, PlayTime } from './model/player';
+export type { NtrpRating, Player, PlayerId, ProfileUpdate } from './model/player';
 export {
   formatsLabel,
   matchTimeSchema,
@@ -25,6 +23,14 @@ export {
   gameDaySchema,
   gameFormatLabels,
   gameFormatSchema,
+  gameTimes,
+  lookingForLabels,
+  lookingForSchema,
+  newGameSchema,
   openGameSchema,
 } from './model/openGame';
-export type { GameDay, GameFormat, OpenGame } from './model/openGame';
+export type { GameDay, GameFormat, LookingFor, NewGame, OpenGame } from './model/openGame';
+export { openGameApi } from './api/openGameApi';
+export { openGameQueries } from './api/openGameQueries';
+export { playerQueries } from './api/playerQueries';
+export { savedPlayerApi } from './api/savedPlayerApi';

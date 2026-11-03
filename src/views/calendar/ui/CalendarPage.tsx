@@ -1,5 +1,5 @@
 import { isoDateSchema, MonthCalendar } from '@/widgets/month-calendar';
-import { sampleEvents, sampleFreePlayers } from '../model/sampleCalendar';
+import { sampleFreePlayers } from '../model/sampleCalendar';
 import styles from './CalendarPage.module.css';
 
 type CalendarPageProps = {
@@ -28,7 +28,6 @@ export function CalendarPage({ today, day }: CalendarPageProps) {
 
       <MonthCalendar
         todayIso={todayIso}
-        events={sampleEvents(todayIso)}
         freePlayers={sampleFreePlayers}
         initialDay={initialDay.success ? initialDay.data : undefined}
       />

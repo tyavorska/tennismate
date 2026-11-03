@@ -53,6 +53,7 @@ function game(overrides: GameInput): OpenGame {
     district: 'Kazimierz',
     spotsOpen: 1,
     isMine: false,
+    isJoined: false,
     ...overrides,
   });
 }

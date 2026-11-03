@@ -1,15 +1,19 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { z } from 'zod';
 import {
+  newGameSchema,
   ntrpRatingSchema,
+  openGameQueries,
   openGameSchema,
   playerListingSchema,
+  playerQueries,
   type OpenGame,
   type PlayerListing,
 } from '@/entities/player';
 import { sampleConversations } from '@/entities/conversation';
+import { createTestQueryClient, renderWithQuery } from '@/shared/testing';
 import { InboxProvider } from '@/features/inbox';
 import { PlayerFinder } from '../index';
 
@@ -20,6 +24,7 @@ const navigation = await vi.hoisted(async () => {
 vi.mock('next/navigation', () => navigation.module);
 
 beforeEach(() => navigation.setUrl('/players'));
+afterEach(() => vi.unstubAllGlobals());
 
 function player(
   id: string,
@@ -64,6 +69,7 @@ const games: readonly OpenGame[] = [
     district: 'Kazimierz',
     spotsOpen: 1,
     isMine: false,
+    isJoined: false,
   }),
 ];
 
@@ -72,18 +78,103 @@ const courts = [
   { name: 'Park Jordana', district: 'Krowodrza' },
 ];
 
+type FakeServer = { games: OpenGame[]; saved: string[]; failNext?: Response };
+
+function json(body: z.core.util.JSONType, status = 200): Response {
+  return new Response(JSON.stringify(body), { status });
+}
+
+function problemResponse(kind: string, status: number, message: string): Response {
+  return json({ kind, message }, status);
+}
+
+/** Stands in for the API: keeps games and saved players in memory and answers like the server does. */
+function installFakeApi(server: FakeServer): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      if (server.failNext !== undefined) {
+        const failure = server.failNext;
+        server.failNext = undefined;
+        return failure;
+      }
+      const method = init?.method ?? 'GET';
+      const path = new URL(String(input), 'http://localhost').pathname;
+      const [, , resource, id, rest] = path.split('/');
+
+      if (resource === 'me') return handleSaved(server, method, path.split('/')[4]);
+      if (method === 'GET') return json(server.games);
+      if (method === 'POST') return handleCreate(server, String(init?.body));
+
+      const game = server.games.find((candidate) => candidate.id === id);
+      if (game === undefined)
+        return problemResponse('notFound', 404, 'This game no longer exists.');
+      if (rest === undefined) {
+        server.games = server.games.filter((candidate) => candidate.id !== id);
+        return new Response(null, { status: 204 });
+      }
+      if (method === 'PUT' && game.spotsOpen === 0) {
+        return problemResponse('conflict', 409, 'This game is full.');
+      }
+      const joined = method === 'PUT';
+      const updated = openGameSchema.parse({
+        ...game,
+        isJoined: joined,
+        spotsOpen: game.spotsOpen + (joined ? -1 : 1),
+      });
+      server.games = server.games.map((candidate) => (candidate.id === id ? updated : candidate));
+      return json(updated);
+    }),
+  );
+}
+
+function handleSaved(server: FakeServer, method: string, id: string | undefined): Response {
+  if (method === 'GET' || id === undefined) return json(server.saved);
+  server.saved =
+    method === 'PUT' ? [...server.saved, id] : server.saved.filter((saved) => saved !== id);
+  return new Response(null, { status: 204 });
+}
+
+function handleCreate(server: FakeServer, body: string): Response {
+  const offer = newGameSchema.parse(JSON.parse(body));
+  const court = courts.find((candidate) => candidate.name === offer.court);
+  const game = openGameSchema.parse({
+    id: `mine-${server.games.length + 1}`,
+    hostName: 'You',
+    hostInitials: 'You',
+    rating: offer.rating,
+    format: offer.format,
+    day: offer.day,
+    time: offer.time,
+    court: offer.court,
+    district: court?.district ?? 'Kazimierz',
+    spotsOpen: offer.format === 'doubles' ? 3 : 1,
+    isMine: true,
+    isJoined: false,
+  });
+  server.games = [game, ...server.games];
+  return json(game, 201);
+}
+
+let server: FakeServer = { games: [], saved: [] };
+
 function renderFinder(initialDialog?: 'offer' | 'quiz'): ReturnType<typeof userEvent.setup> {
   if (initialDialog !== undefined) navigation.setUrl(`/players?${initialDialog}=1`);
-  render(
+  server = { games: [...games], saved: [] };
+  installFakeApi(server);
+  const client = createTestQueryClient();
+  client.setQueryData(openGameQueries.list().queryKey, server.games);
+  client.setQueryData(playerQueries.saved().queryKey, server.saved);
+  renderWithQuery(
     <InboxProvider conversations={sampleConversations}>
       <PlayerFinder
         players={players}
-        games={games}
         courts={courts}
         viewerRating={ntrpRatingSchema.parse(3.5)}
         aside={<aside aria-label="Side panel">Side content</aside>}
       />
     </InboxProvider>,
+    client,
   );
   return userEvent.setup();
 }
@@ -252,6 +343,7 @@ describe('PlayerFinder', () => {
       const user = renderFinder();
 
       await user.click(screen.getByRole('button', { name: 'Save Piotr K.' }));
+      expect(await screen.findByText('Piotr K. saved.')).toBeInTheDocument();
       await openMoreFilters(user);
       await user.click(screen.getByRole('checkbox', { name: 'At your level' }));
       await user.click(screen.getByRole('checkbox', { name: 'Saved players' }));
@@ -261,7 +353,20 @@ describe('PlayerFinder', () => {
         'true',
       );
       expect(playerNames()).toEqual(['Piotr K.']);
-      expect(screen.getByText('Piotr K. saved.')).toBeInTheDocument();
+      expect(server.saved).toHaveLength(1);
+    });
+
+    it('puts the bookmark back and says so when saving fails', async () => {
+      const user = renderFinder();
+      server.failNext = problemResponse('server', 500, 'Something went wrong on our side.');
+
+      await user.click(screen.getByRole('button', { name: 'Save Piotr K.' }));
+
+      expect(await screen.findByText(/Piotr K. was not updated/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save Piotr K.' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
     });
 
     it('opens the chat with the invite form when you press "Let\'s play"', async () => {
@@ -322,7 +427,7 @@ describe('PlayerFinder', () => {
 
       await user.click(screen.getByRole('button', { name: 'Join game' }));
 
-      expect(screen.getByRole('button', { name: 'Joined' })).toHaveAttribute(
+      expect(await screen.findByRole('button', { name: 'Joined' })).toHaveAttribute(
         'aria-pressed',
         'true',
       );
@@ -330,7 +435,19 @@ describe('PlayerFinder', () => {
 
       await user.click(screen.getByRole('button', { name: 'Joined' }));
 
-      expect(screen.getByText('1 spot open')).toBeInTheDocument();
+      expect(await screen.findByText('1 spot open')).toBeInTheDocument();
+    });
+
+    it('says why joining failed and shows the game as the server has it', async () => {
+      const user = renderFinder();
+      server.games = server.games.map((game) => openGameSchema.parse({ ...game, spotsOpen: 0 }));
+
+      await user.click(screen.getByRole('button', { name: 'Join game' }));
+
+      expect(
+        await screen.findByText(/You did not join the game. This game is full./),
+      ).toBeInTheDocument();
+      expect(await screen.findByText('Full')).toBeInTheDocument();
     });
   });
 
@@ -374,7 +491,7 @@ describe('PlayerFinder', () => {
       await user.click(screen.getByRole('button', { name: 'Offer a game' }));
       await user.click(screen.getByRole('button', { name: 'Post my game' }));
 
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       const gameCards = screen
         .getAllByRole('heading', { level: 3 })
         .filter((heading) => /Club|Park/.test(heading.textContent ?? ''));
@@ -385,8 +502,54 @@ describe('PlayerFinder', () => {
 
       await user.click(screen.getByRole('button', { name: 'Remove' }));
 
-      expect(screen.queryByText('Your post')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByText('Your post')).not.toBeInTheDocument());
       expect(summary()).toContain('1 open game');
+    });
+
+    it('shows the server message for a select field, such as a time that has passed', async () => {
+      const user = renderFinder();
+      await user.click(screen.getByRole('button', { name: 'Offer a game' }));
+      await user.type(screen.getByRole('textbox', { name: 'Note' }), 'Bring balls');
+      server.failNext = json(
+        { kind: 'validation', fieldErrors: { time: 'Choose a time that has not passed.' } },
+        422,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Post my game' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Choose a time that has not passed.',
+      );
+      expect(screen.getByRole('dialog', { name: 'Offer myself as a player' })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Bring balls');
+    });
+
+    it('does not show an old error when the form is opened again', async () => {
+      const user = renderFinder();
+      await user.click(screen.getByRole('button', { name: 'Offer a game' }));
+      server.failNext = problemResponse('server', 500, 'Something went wrong on our side.');
+      await user.click(screen.getByRole('button', { name: 'Post my game' }));
+      await screen.findByRole('alert');
+
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await user.click(screen.getByRole('button', { name: 'Offer a game' }));
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('keeps the form open with everything typed and shows the error when posting fails', async () => {
+      const user = renderFinder();
+      await user.click(screen.getByRole('button', { name: 'Offer a game' }));
+      await user.type(screen.getByRole('textbox', { name: 'Note' }), 'Bring balls');
+      server.failNext = problemResponse('server', 500, 'Something went wrong on our side.');
+
+      await user.click(screen.getByRole('button', { name: 'Post my game' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Something went wrong on our side.',
+      );
+      expect(screen.getByRole('dialog', { name: 'Offer myself as a player' })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Bring balls');
     });
 
     it('uses the court chosen in the form', async () => {
@@ -502,8 +665,8 @@ describe('PlayerFinder', () => {
 
       await user.click(screen.getByRole('button', { name: 'Post my game' }));
 
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(navigation.current()).toBe('/players');
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('opens the form when the address changes to ?offer=1, such as from the header shortcut', () => {

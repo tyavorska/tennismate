@@ -53,6 +53,20 @@ export function AppShell({ viewer, children }: AppShellProps) {
         </header>
 
         <main className={styles.content}>{children}</main>
+
+        <footer className={styles.footer}>
+          <p>
+            Court data ©{' '}
+            <a href="https://www.openstreetmap.org/copyright" className={styles.footerLink}>
+              OpenStreetMap contributors
+            </a>
+            . City data from{' '}
+            <a href="https://www.geonames.org/" className={styles.footerLink}>
+              GeoNames
+            </a>{' '}
+            (CC BY 4.0).
+          </p>
+        </footer>
       </div>
     </InboxProvider>
   );

@@ -2,8 +2,8 @@ import 'server-only';
 import { z } from 'zod';
 import { playerSchema, type Player, type ProfileUpdate } from '@/entities/player';
 import type { User } from '@/entities/user';
-import { distanceKm } from '@/shared/lib';
 import { requireCity } from '../cities';
+import { distanceKm } from '@/shared/lib';
 import { db } from '../db';
 import { DomainError } from '../http';
 
@@ -16,6 +16,7 @@ const profileRowSchema = z.object({
   district: z.string(),
   city_id: z.number(),
   city_name: z.string(),
+  city_timezone: z.string(),
 });
 
 const districtRowSchema = z.object({ id: z.number(), latitude: z.number(), longitude: z.number() });
@@ -36,7 +37,7 @@ function toPlayer(row: z.infer<typeof profileRowSchema>): Player {
     name: row.name,
     rating: row.rating,
     neighborhood: row.district,
-    city: { id: row.city_id, name: row.city_name },
+    city: { id: row.city_id, name: row.city_name, timezone: row.city_timezone },
   });
 }
 
@@ -44,7 +45,7 @@ function findProfile(userId: string): Player | undefined {
   const row = db
     .prepare(
       `SELECT profiles.user_id AS id, profiles.name, profiles.rating, districts.name AS district,
-              cities.id AS city_id, cities.name AS city_name
+              cities.id AS city_id, cities.name AS city_name, cities.timezone AS city_timezone
        FROM profiles
        JOIN districts ON districts.id = profiles.district_id
        JOIN cities ON cities.id = profiles.city_id

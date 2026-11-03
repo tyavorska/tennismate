@@ -2,13 +2,14 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync, SQLOutputValue } from 'node:sqlite';
 import { z } from 'zod';
-import { krakowToUtc, nextWeekday, todayInKrakow, addDays } from '@/shared/lib';
+import { addDays, nextWeekday, todayIn, zonedToUtc } from '@/shared/lib';
 import { demoGames, demoPlayers, demoTournaments } from './demoData';
 import { cityData } from './referenceData';
 import { transaction } from './transaction';
 
 const dayMs = 86_400_000;
 const demoCitySlug = 'krakow';
+const demoTimeZone = 'Europe/Warsaw';
 
 /** Placeholder hash with no `:`, so no password ever matches and nobody can sign in as a demo player. */
 const unusableHash = '!';
@@ -22,7 +23,12 @@ export function demoUserId(slug: string): string {
   return `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
 }
 
-export function seedReferenceData(database: DatabaseSync): void {
+type ReferenceOptions = Readonly<{
+  /** Made-up courts for development and tests. A real database gets its courts from the import. */
+  demoCourts: boolean;
+}>;
+
+export function seedReferenceData(database: DatabaseSync, { demoCourts }: ReferenceOptions): void {
   const insertCity = database.prepare(
     `INSERT OR IGNORE INTO cities (slug, name, country, timezone, latitude, longitude)
      VALUES (?, ?, ?, ?, ?, ?)`,
@@ -50,7 +56,9 @@ export function seedReferenceData(database: DatabaseSync): void {
       city.districts.forEach(({ name, latitude, longitude }) =>
         insertDistrict.run(city.slug, name, latitude, longitude),
       );
-      city.courts.forEach(({ name, district }) => insertCourt.run(name, city.slug, district));
+      if (demoCourts) {
+        city.courts.forEach(({ name, district }) => insertCourt.run(name, city.slug, district));
+      }
     });
   });
 }
@@ -87,7 +95,7 @@ export function seedDemoData(database: DatabaseSync, now: Date): void {
     'INSERT INTO tournaments (id, name, court_id, date) VALUES (?, ?, (SELECT courts.id FROM courts JOIN cities ON cities.id = courts.city_id WHERE cities.slug = ? AND courts.name = ?), ?)',
   );
 
-  const today = todayInKrakow(now);
+  const today = todayIn(now, demoTimeZone);
   const nowIso = now.toISOString();
 
   transaction(database, () => {
@@ -128,7 +136,7 @@ export function seedDemoData(database: DatabaseSync, now: Date): void {
           demoUserId(game.host),
           demoCitySlug,
           game.court,
-          krakowToUtc(date, game.time).toISOString(),
+          zonedToUtc(date, game.time, demoTimeZone).toISOString(),
           game.format,
           game.rating,
           game.spots,

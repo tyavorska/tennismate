@@ -15,7 +15,7 @@ const player = {
   name: 'Ana',
   rating: 3,
   neighborhood: 'Stare Miasto',
-  city: { id: 1, name: 'Kraków' },
+  city: { id: 1, name: 'Kraków', timezone: 'Europe/Warsaw' },
 };
 
 function respondWith(body: object, status: number): ReturnType<typeof vi.fn> {

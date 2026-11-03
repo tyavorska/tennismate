@@ -28,7 +28,7 @@ describe('createProfile', () => {
       name: 'Ana Smith',
       rating: 3,
       neighborhood: 'Stare Miasto',
-      city: { id: krakowId(), name: 'Kraków' },
+      city: { id: krakowId(), name: 'Kraków', timezone: 'Europe/Warsaw' },
     });
   });
 
@@ -74,7 +74,7 @@ describe('updateProfile', () => {
       name: 'Cleo C.',
       rating: 4,
       neighborhood: 'Podgórze',
-      city: { id: krakowId(), name: 'Kraków' },
+      city: { id: krakowId(), name: 'Kraków', timezone: 'Europe/Warsaw' },
     });
   });
 

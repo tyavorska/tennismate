@@ -155,8 +155,9 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
   the file.
 - Foreign keys are on, with `ON DELETE CASCADE` for data that belongs to a user. `initialize` runs
   on every module load, so everything in it is safe to repeat.
-- Reference data (cities, districts, courts) lives in `server/db/referenceData.ts` and is seeded in
-  every environment with `INSERT OR IGNORE`.
+- `server/db/referenceData.ts` seeds Kraków and its districts in every environment, and made-up
+  demo courts everywhere except production (`source = 'demo'`). Real cities and courts come from the
+  imports (see Cities). Seeds use `INSERT OR IGNORE`.
 - **Demo data is development-only** (`NODE_ENV === 'development'`), idempotent and non-destructive:
   demo games are replaced only once all of them have passed, so a restart never undoes a join.
   Demo players are real `users` rows with the password hash `!`, which no password matches.
@@ -174,9 +175,38 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
 
 The app is open in several cities. A player only ever sees, and can only act on, their own city.
 
-- **A city is curated.** It goes into `referenceData.ts` only once its districts and courts are
-  listed. Sign-up shows this list (`GET /api/cities`, open to everyone). There is no free-text city.
-  Players in a missing city can ask for it (`city_requests`, not built yet).
+- **A city is open when it has at least one listed court** (`courts.removed_at IS NULL`). This is
+  computed, never stored. Sign-up shows only open cities (`GET /api/cities`, open to everyone), and
+  `requireCity` refuses a city that is not open. There is no free-text city. The app starts in
+  Europe.
+- **Our database is the source of truth for courts.** Cities come from GeoNames and a city's first
+  courts come from OpenStreetMap, both **imported once, never read live and never synced on a
+  schedule**. Clubs will register and edit their own courts, so nothing may overwrite a court
+  automatically. `courts.source` says where a court came from: `osm`, `manual` (entered by a
+  person or club), `demo`, and later `claimed`.
+  - `npm run import:cities -- cities15000.txt` adds the European cities of a GeoNames dump
+    (`europe.ts` lists the countries). It matches by `geonames_id`, keeps slugs, and takes the time
+    zone from the dump.
+  - `npm run import:courts -- <slug>` makes **one** request to the public Overpass server for one
+    city and **only adds places that are new**. It changes nothing already in the database. Run it
+    for a city someone asked for, not for all cities. It never runs from a user's request. Tests use
+    a saved answer (`imports/fixtures`), never the network.
+  - `--refresh` is the only way an import changes existing courts: it updates `osm` courts found
+    again and hides `osm` courts that are gone. Use it on purpose, never with a partial answer
+    (`--from-file` with a trimmed file hides everything else). It never touches a court whose
+    `source` is not `osm`.
+  - Courts within 100 m become one place (`venues.ts`). Each place gets the nearest suburb point as
+    its district, or the city name when there are none. A place with no name is called
+    "Tennis courts, <district>", numbered when needed. A court's name is chosen once and kept.
+  - Courts are hidden (`removed_at`), never deleted, because games point at them. An empty answer
+    changes nothing. Courts are matched through `court_osm_elements`, keyed per city, because the
+    circles of neighbouring cities overlap and each city keeps its own copy of a shared court.
+  - OpenStreetMap data is ODbL and GeoNames data is CC BY 4.0. The app footer credits both, so
+    keep it. A copied court stays under ODbL, so keep `source`: it separates OSM courts from the
+    ones clubs entered, in case the data is ever shared.
+  - The scripts run with `tsx --conditions=react-server`, so `server-only` and the `@/` alias work.
+    Import only from `@/server/imports` and `@/server/db`. `shared/lib` must stay free of
+    React and Next imports for the same reason, so hooks live in `shared/hooks`.
 - Every district, court and profile has a `city_id`. Names are unique only inside a city. A profile's
   district must belong to its city, and the database enforces it with a composite foreign key.
 - **Isolation is enforced on the server**, in SQL, not in the UI. Every query for players, games,
@@ -199,6 +229,14 @@ The app is open in several cities. A player only ever sees, and can only act on,
 
 **Planned, not built yet:**
 
+- **Clubs register and own their courts.** A club that is not in the database creates a court
+  (`source = 'manual'`), and that alone opens a city, so a city does not need an import to open. A
+  club that is already there (imported) **claims** the existing court instead of making a
+  duplicate: search nearby by name and place, then verify (admin approval or email/phone). A
+  claimed court changes `source` to `claimed`, so no import touches it again. Hours, prices,
+  contacts and booking will live in a `clubs` table, which OSM cannot supply (Kraków: no
+  websites, no opening hours).
+
 - **Changing city** (profile settings) needs a confirm step that shows the impact first
   (`GET /api/me/city/impact`). `PUT /api/me/city` with `confirm: true` then, in one transaction,
   changes the city, **cancels** the games the player hosts, removes them from the games they joined,
@@ -208,17 +246,20 @@ The app is open in several cities. A player only ever sees, and can only act on,
   to the messenger afterwards (outbox), so none are lost.
 - Saved players in another city stay saved but are hidden.
 - Open question: a limit on how often the city can change.
+- Sign-up lists only open cities in a plain select. For the full European list it needs a search
+  box (`GET /api/cities?q=`). Picking a city with no courts should save the email in
+  `city_requests` and say we are not there yet, without creating an account.
+- GeoNames names are English (`Warsaw`, not `Warszawa`). Decide how to show local names.
 - Remove the hard-coded "Kraków" from the UI: the Players page heading, "All of Kraków" and the
   "New in Kraków" list in the filters, the level quiz text, and the calendar lead.
-- `cities.timezone` is stored, but the time helpers in `@/shared/lib` still use `Europe/Warsaw`.
-  Make them take the city's zone before adding a city in another timezone.
 
 ### Time
 
 - Store instants as UTC ISO strings (`starts_at`). Store plain dates as `YYYY-MM-DD`.
-- Convert with `krakowToUtc`, `toKrakowWallClock`, `todayInKrakow` and `nextWeekday` from
-  `@/shared/lib`. They use `Europe/Warsaw` and follow daylight saving. Never use the server's local
-  time. The zone is fixed for now (see Cities).
+- Convert with `zonedToUtc`, `toWallClock`, `todayIn` and `nextWeekday` from `@/shared/lib`. Every
+  call takes an IANA time zone, which is the **city's** (`viewer.city.timezone`, from
+  `cities.timezone`). They follow daylight saving. Never use the server's local time and never
+  hard-code a zone outside seed and test data.
 - The finder's `Today / Tomorrow / Sat / Sun` is a display of a real date, not data. Only games in
   the next 7 days with one of those names appear in the finder. The calendar shows every date.
 

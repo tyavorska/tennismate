@@ -16,7 +16,7 @@ function openDatabase(path: string): DatabaseSync {
 // Safe to repeat, so a reused connection also picks up tables and data added since it was opened.
 function initialize(database: DatabaseSync): DatabaseSync {
   migrate(database);
-  seedReferenceData(database);
+  seedReferenceData(database, { demoCourts: serverEnv.NODE_ENV !== 'production' });
   if (serverEnv.NODE_ENV === 'development') seedDemoData(database, new Date());
   return database;
 }

@@ -10,7 +10,7 @@ import { listPlayers, listSavedPlayerIds, savePlayer } from '../players';
 import { getProfile, updateProfile } from '../profiles';
 import { addCity, addTournament } from '../testing/cities';
 import { createPlayer, krakowId } from '../testing/players';
-import { listCities } from './cities';
+import { listCities, requireCity } from './cities';
 
 // Monday 2 Nov 2026, noon in Kraków.
 const now = new Date('2026-11-02T11:00:00.000Z');
@@ -52,7 +52,7 @@ describe('cities', () => {
     const user = await playerIn('start@example.com');
 
     expect(getProfile(user)).toMatchObject({
-      city: { id: krakowId(), name: 'Kraków' },
+      city: { id: krakowId(), name: 'Kraków', timezone: 'Europe/Warsaw' },
       neighborhood: 'Stare Miasto',
     });
   });
@@ -61,9 +61,40 @@ describe('cities', () => {
     const user = await playerIn('gd@example.com', gdansk.id);
 
     expect(getProfile(user)).toMatchObject({
-      city: { id: gdansk.id, name: 'gdansk' },
+      city: { id: gdansk.id, name: 'gdansk', timezone: 'Europe/Warsaw' },
       neighborhood: gdansk.district,
     });
+  });
+});
+
+describe('open cities', () => {
+  it('leaves out a city with no court, and refuses it at sign-up', () => {
+    db.prepare(
+      `INSERT INTO cities (slug, name, country, timezone, latitude, longitude)
+       VALUES ('empty', 'Empty', 'PL', 'Europe/Warsaw', 0, 0)`,
+    ).run();
+    const empty = db.prepare("SELECT id FROM cities WHERE slug = 'empty'").get();
+
+    expect(listCities().map((city) => city.slug)).not.toContain('empty');
+    expect(kindOfError(() => requireCity(Number(empty?.id)))).toBe('validation');
+  });
+
+  it('closes a city again when its only court is hidden', () => {
+    const closing = addCity('closing');
+    expect(listCities().map((city) => city.slug)).toContain('closing');
+
+    db.prepare('UPDATE courts SET removed_at = ? WHERE city_id = ?').run('2026-11-01', closing.id);
+
+    expect(listCities().map((city) => city.slug)).not.toContain('closing');
+    expect(listCourts(closing.id)).toEqual([]);
+  });
+
+  it('does not let a game be created on a hidden court', async () => {
+    const hiding = addCity('hiding');
+    const host = await playerIn('hiding-host@example.com', hiding.id);
+    db.prepare('UPDATE courts SET removed_at = ? WHERE city_id = ?').run('2026-11-01', hiding.id);
+
+    expect(kindOfError(() => createGame(host, offer(hiding.court), now))).toBe('validation');
   });
 });
 
@@ -152,6 +183,24 @@ describe('games', () => {
 
     expect(kindOfError(() => joinGame(visitor, game.id, now))).toBe('notFound');
     expect(kindOfError(() => deleteGame(visitor, game.id))).toBe('notFound');
+  });
+});
+
+describe('time zones', () => {
+  it('read a game time on the clocks of the city it is in', async () => {
+    const london = addCity('london', 'Europe/London');
+    const host = await playerIn('london-host@example.com', london.id);
+    const local = await playerIn('krakow-host@example.com');
+
+    const inLondon = createGame(host, offer(london.court), now);
+    const inKrakow = createGame(local, offer('Park Jordana'), now);
+
+    expect(inLondon).toMatchObject({ day: 'Tomorrow', time: '18:30' });
+    expect(inKrakow).toMatchObject({ day: 'Tomorrow', time: '18:30' });
+    const startsAt = (id: string) =>
+      db.prepare('SELECT starts_at FROM games WHERE id = ?').get(id)?.starts_at;
+    expect(startsAt(inLondon.id)).toBe('2026-11-03T18:30:00.000Z');
+    expect(startsAt(inKrakow.id)).toBe('2026-11-03T17:30:00.000Z');
   });
 });
 

@@ -26,7 +26,12 @@ export const playerSchema = z.object({
   rating: ntrpRatingSchema,
   neighborhood: z.string().min(1),
   /** The city the player plays in. Everything the player sees is limited to it. */
-  city: z.object({ id: z.number().int().positive(), name: z.string().min(1) }),
+  city: z.object({
+    id: z.number().int().positive(),
+    name: z.string().min(1),
+    /** An IANA time zone name such as `Europe/Warsaw`. Game times are read in it. */
+    timezone: z.string().min(1),
+  }),
 });
 export type Player = Readonly<z.infer<typeof playerSchema>>;
 

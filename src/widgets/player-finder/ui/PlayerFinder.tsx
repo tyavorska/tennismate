@@ -25,7 +25,7 @@ import { LevelQuizDialog } from '@/features/level-quiz';
 import { useToggleJoin } from '@/features/join-game';
 import { OfferGameDialog, useRemoveGame } from '@/features/offer-game';
 import { useToggleSaved } from '@/features/save-player';
-import { useUrlFlag } from '@/shared/lib';
+import { useUrlFlag } from '@/shared/hooks';
 import {
   Button,
   CountBadge,

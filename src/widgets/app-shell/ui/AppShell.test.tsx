@@ -13,7 +13,7 @@ const viewer = playerSchema.parse({
   name: 'Tania Ivanova',
   rating: 2,
   neighborhood: 'Stare Miasto',
-  city: { id: 1, name: 'Kraków' },
+  city: { id: 1, name: 'Kraków', timezone: 'Europe/Warsaw' },
 });
 
 function renderShell(): void {
@@ -38,6 +38,19 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AppShell', () => {
+  it('credits OpenStreetMap for the court data', () => {
+    renderShell();
+
+    expect(screen.getByRole('link', { name: 'OpenStreetMap contributors' })).toHaveAttribute(
+      'href',
+      'https://www.openstreetmap.org/copyright',
+    );
+    expect(screen.getByRole('link', { name: 'GeoNames' })).toHaveAttribute(
+      'href',
+      'https://www.geonames.org/',
+    );
+  });
+
   describe('navigation', () => {
     it('marks the current page in the main nav', () => {
       renderShell();

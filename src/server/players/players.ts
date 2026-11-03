@@ -12,8 +12,9 @@ import type { User } from '@/entities/user';
 import { getCurrentUser } from '../auth';
 import { db } from '../db';
 import { DomainError } from '../http';
-import { ensureProfile } from '../profiles';
-import { distanceKm, fitPercent } from './matching';
+import { getProfile, requireProfile } from '../profiles';
+import { distanceKm } from '@/shared/lib';
+import { fitPercent } from './matching';
 
 const newPlayerDays = 14;
 const dayMs = 86_400_000;
@@ -42,7 +43,7 @@ const defaultPlayStyle = 'Social';
 /** The signed-in user's player profile. Cached per request. */
 export const getViewer = cache(async (): Promise<Player | undefined> => {
   const user = await getCurrentUser();
-  return user && ensureProfile(user);
+  return user && getProfile(user);
 });
 
 function parseJsonColumn(text: string): z.core.util.JSONType {
@@ -74,13 +75,13 @@ function toListing(
   });
 }
 
-/** Everyone except the viewer, with distance and fit worked out from the viewer's district. */
+/** Everyone else in the viewer's city, with distance and fit worked out from the viewer's district. */
 export function listPlayers(user: User, now: Date = new Date()): readonly PlayerListing[] {
-  ensureProfile(user);
+  const { city } = requireProfile(user);
   const viewerRow = db
     .prepare(
       `SELECT profiles.rating, districts.latitude, districts.longitude FROM profiles
-       JOIN districts ON districts.name = profiles.district WHERE profiles.user_id = ?`,
+       JOIN districts ON districts.id = profiles.district_id WHERE profiles.user_id = ?`,
     )
     .get(user.id);
   const viewer = z
@@ -90,13 +91,13 @@ export function listPlayers(user: User, now: Date = new Date()): readonly Player
   const rows = db
     .prepare(
       `SELECT profiles.user_id AS id, profiles.name, profiles.age, profiles.rating,
-              profiles.district, districts.latitude, districts.longitude, profiles.play_style,
-              profiles.formats, profiles.times, profiles.free_tonight,
+              districts.name AS district, districts.latitude, districts.longitude,
+              profiles.play_style, profiles.formats, profiles.times, profiles.free_tonight,
               profiles.wants_doubles_partner, profiles.created_at
-       FROM profiles JOIN districts ON districts.name = profiles.district
-       WHERE profiles.user_id != ?`,
+       FROM profiles JOIN districts ON districts.id = profiles.district_id
+       WHERE profiles.city_id = ? AND profiles.user_id != ?`,
     )
-    .all(user.id);
+    .all(city.id, user.id);
 
   return z
     .array(listingRowSchema)
@@ -104,26 +105,41 @@ export function listPlayers(user: User, now: Date = new Date()): readonly Player
     .map((row) => toListing(row, viewer, now));
 }
 
-export function listSavedPlayerIds(userId: string): readonly string[] {
+/** Saved players in the viewer's city. Those in another city stay saved but are not shown. */
+export function listSavedPlayerIds(user: User): readonly string[] {
+  const { city } = requireProfile(user);
   const rows = db
-    .prepare('SELECT player_id FROM saved_players WHERE user_id = ? ORDER BY created_at')
-    .all(userId);
+    .prepare(
+      `SELECT saved_players.player_id FROM saved_players
+       JOIN profiles ON profiles.user_id = saved_players.player_id
+       WHERE saved_players.user_id = ? AND profiles.city_id = ?
+       ORDER BY saved_players.created_at`,
+    )
+    .all(user.id, city.id);
   return z.array(z.string()).parse(rows.map((row) => row.player_id));
 }
 
-export function savePlayer(userId: string, playerId: string): void {
-  if (playerId === userId) {
+export function savePlayer(user: User, playerId: string): void {
+  if (playerId === user.id) {
     throw new DomainError('validation', { message: 'You cannot save your own profile.' });
   }
-  const player = db.prepare('SELECT 1 AS found FROM profiles WHERE user_id = ?').get(playerId);
-  if (player === undefined)
+  const { city } = requireProfile(user);
+  // A player in another city looks the same as one that does not exist.
+  const player = db
+    .prepare('SELECT 1 AS found FROM profiles WHERE user_id = ? AND city_id = ?')
+    .get(playerId, city.id);
+  if (player === undefined) {
     throw new DomainError('notFound', { message: 'This player no longer exists.' });
+  }
 
   db.prepare(
     'INSERT OR IGNORE INTO saved_players (user_id, player_id, created_at) VALUES (?, ?, ?)',
-  ).run(userId, playerId, new Date().toISOString());
+  ).run(user.id, playerId, new Date().toISOString());
 }
 
-export function unsavePlayer(userId: string, playerId: string): void {
-  db.prepare('DELETE FROM saved_players WHERE user_id = ? AND player_id = ?').run(userId, playerId);
+export function unsavePlayer(user: User, playerId: string): void {
+  db.prepare('DELETE FROM saved_players WHERE user_id = ? AND player_id = ?').run(
+    user.id,
+    playerId,
+  );
 }

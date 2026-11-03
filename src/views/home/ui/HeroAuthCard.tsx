@@ -1,11 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { City } from '@/entities/city';
 import { SignInForm } from '@/features/sign-in';
 import { SignUpForm } from '@/features/sign-up';
 import styles from './HeroAuthCard.module.css';
 
 type Mode = 'sign-up' | 'sign-in';
+
+type HeroAuthCardProps = {
+  /** The cities a new account can start in. */
+  cities: readonly City[];
+};
 
 const modeByHash: Readonly<Record<string, Mode | undefined>> = {
   '#sign-up': 'sign-up',
@@ -16,7 +22,7 @@ const modeByHash: Readonly<Record<string, Mode | undefined>> = {
  * The landing card. It starts on create account; the "Log in" links on the page, the
  * header and the bottom call to action all swap it in place instead of leaving the page.
  */
-export function HeroAuthCard() {
+export function HeroAuthCard({ cities }: HeroAuthCardProps) {
   const [mode, setMode] = useState<Mode>('sign-up');
   const [focusRequest, setFocusRequest] = useState({ count: 0, scroll: false });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -64,7 +70,12 @@ export function HeroAuthCard() {
   return (
     <div ref={cardRef} tabIndex={-1} className={styles.card}>
       {mode === 'sign-up' ? (
-        <SignUpForm headingLevel={2} layout="inline" onSwitch={() => show('sign-in', false)} />
+        <SignUpForm
+          headingLevel={2}
+          layout="inline"
+          cities={cities}
+          onSwitch={() => show('sign-in', false)}
+        />
       ) : (
         <SignInForm headingLevel={2} onSwitch={() => show('sign-up', false)} />
       )}

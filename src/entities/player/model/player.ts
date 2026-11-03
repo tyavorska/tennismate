@@ -7,6 +7,12 @@ export type PlayerId = z.infer<typeof playerIdSchema>;
 export const ntrpRatingSchema = z.number().min(1).max(7).multipleOf(0.5).brand<'NtrpRating'>();
 export type NtrpRating = z.infer<typeof ntrpRatingSchema>;
 
+/** The city a player picks before they can use the app. */
+export const newProfileSchema = z.object({
+  cityId: z.number().int().positive('Choose your city'),
+});
+export type NewProfile = z.infer<typeof newProfileSchema>;
+
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(1, 'Enter your name'),
   neighborhood: z.string().trim().min(1, 'Enter your home district'),
@@ -19,6 +25,8 @@ export const playerSchema = z.object({
   name: z.string().min(1),
   rating: ntrpRatingSchema,
   neighborhood: z.string().min(1),
+  /** The city the player plays in. Everything the player sees is limited to it. */
+  city: z.object({ id: z.number().int().positive(), name: z.string().min(1) }),
 });
 export type Player = Readonly<z.infer<typeof playerSchema>>;
 

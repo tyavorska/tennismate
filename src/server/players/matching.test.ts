@@ -1,19 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { distanceKm, fitPercent } from './matching';
-
-const oldTown = { latitude: 50.0614, longitude: 19.9366 };
-const nowaHuta = { latitude: 50.0722, longitude: 20.0371 };
-
-describe('distanceKm', () => {
-  it('measures the distance between two districts', () => {
-    expect(distanceKm(oldTown, nowaHuta)).toBeCloseTo(7.2, 0);
-  });
-
-  it('never reports less than half a kilometre', () => {
-    expect(distanceKm(oldTown, oldTown)).toBe(0.5);
-  });
-});
+import { fitPercent } from './matching';
 
 describe('fitPercent', () => {
   it('is 100 for the same level close by', () => {

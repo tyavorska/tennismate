@@ -16,6 +16,12 @@ export const credentialsSchema = z.object({
 
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+/** What sign-up sends: the credentials and the city the player chose. */
+export const signUpRequestSchema = credentialsSchema.extend({
+  cityId: z.number().int().positive('Choose your city'),
+});
+export type SignUpRequest = z.infer<typeof signUpRequestSchema>;
+
 // Sign-in only requires a password; the length rules apply when one is created.
 export const signInCredentialsSchema = z.object({
   email: emailSchema,

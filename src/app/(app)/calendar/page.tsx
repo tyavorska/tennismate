@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { calendarQueries } from '@/entities/game';
 import { getCurrentUser } from '@/server/auth';
 import { listCalendarEvents } from '@/server/games';
+import { getProfile } from '@/server/profiles';
 import { todayInKrakow } from '@/shared/lib';
 import { CalendarPage } from '@/views/calendar';
 import { isoDateSchema, visibleRange, weekOffsetFor } from '@/widgets/month-calendar';
@@ -16,6 +17,7 @@ const searchParamsSchema = z.object({ day: z.string().optional() });
 export default async function Page(props: PageProps<'/calendar'>) {
   const user = await getCurrentUser();
   if (user === undefined) redirect('/sign-in');
+  if (getProfile(user) === undefined) redirect('/choose-city');
 
   const { day } = searchParamsSchema.catch({}).parse(await props.searchParams);
   const today = todayInKrakow(new Date());

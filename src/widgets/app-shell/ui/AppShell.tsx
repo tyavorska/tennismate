@@ -23,7 +23,7 @@ export function AppShell({ viewer, children }: AppShellProps) {
               <LogoLink href="/players" className={styles.logo} />
               <p className={styles.city}>
                 <span className={styles.cityDot} aria-hidden="true" />
-                Kraków
+                {viewer.city.name}
               </p>
             </div>
 

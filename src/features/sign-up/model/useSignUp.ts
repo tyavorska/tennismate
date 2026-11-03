@@ -1,14 +1,22 @@
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/entities/user';
-import type { ApiError } from '@/shared/api';
+import { signUpRequestSchema, type User } from '@/entities/user';
+import { ApiError } from '@/shared/api';
 import { signUp } from '../api/signUpApi';
 import type { SignUpInput } from './signUpSchema';
 
 export function useSignUp(): UseMutationResult<User, ApiError, SignUpInput> {
   const router = useRouter();
   return useMutation<User, ApiError, SignUpInput>({
-    mutationFn: ({ email, password }) => signUp({ email, password }),
+    mutationFn: ({ email, password, cityId }) => {
+      const request = signUpRequestSchema.safeParse({ email, password, cityId: Number(cityId) });
+      if (!request.success) {
+        return Promise.reject(
+          new ApiError({ kind: 'validation', fieldErrors: { cityId: 'Choose your city' } }),
+        );
+      }
+      return signUp(request.data);
+    },
     onSuccess: () => {
       router.replace('/players');
       router.refresh();

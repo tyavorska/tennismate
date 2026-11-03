@@ -13,6 +13,7 @@ const viewer = playerSchema.parse({
   name: 'Tania Ivanova',
   rating: 2,
   neighborhood: 'Stare Miasto',
+  city: { id: 1, name: 'Kraków' },
 });
 
 function renderShell(): void {

@@ -2,6 +2,7 @@
 
 import {
   Button,
+  FieldError,
   Label,
   ListBox,
   ListBoxItem,
@@ -25,6 +26,10 @@ type SelectFieldProps = {
   inlineLabel?: boolean;
   /** Keeps the label for screen readers only. */
   hideLabel?: boolean;
+  /** Shown while no option is chosen. */
+  placeholder?: string;
+  /** Marks the field invalid and shows the text under it. */
+  error?: string;
   className?: string;
 };
 
@@ -36,6 +41,8 @@ export function SelectField({
   variant = 'field',
   inlineLabel = false,
   hideLabel = false,
+  placeholder,
+  error,
   className,
 }: SelectFieldProps) {
   const labelClass = hideLabel
@@ -48,7 +55,9 @@ export function SelectField({
   return (
     <Select
       className={classes}
-      selectedKey={value}
+      selectedKey={value === '' ? null : value}
+      placeholder={placeholder}
+      isInvalid={error !== undefined}
       onSelectionChange={(key) => {
         if (typeof key === 'string') onChange(key);
       }}
@@ -67,6 +76,7 @@ export function SelectField({
           ))}
         </ListBox>
       </Popover>
+      <FieldError className={styles.error}>{error}</FieldError>
     </Select>
   );
 }

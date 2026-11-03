@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { ButtonLink, Card, Eyebrow, LogoLink } from '@/shared/ui';
-import { getViewer } from '@/server/players';
+import { getCurrentUser } from '@/server/auth';
+import { listCities } from '@/server/cities';
 import { HeroAuthCard } from './HeroAuthCard';
 import { HomeIcon, type HomeIconName } from './HomeIcons';
 import styles from './HomePage.module.css';
@@ -64,7 +65,7 @@ const stats = [
 
 export async function HomePage() {
   // Signed-in players start on their dashboard.
-  if ((await getViewer()) !== undefined) redirect('/players');
+  if ((await getCurrentUser()) !== undefined) redirect('/players');
 
   return (
     <main>
@@ -81,7 +82,7 @@ export async function HomePage() {
             join tournaments. On the web today, with iPhone and Android apps on the way.
           </p>
           <div className={styles.signUp}>
-            <HeroAuthCard />
+            <HeroAuthCard cities={listCities()} />
           </div>
         </div>
         <Image

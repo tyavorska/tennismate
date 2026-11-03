@@ -21,7 +21,7 @@ import {
 } from '@/shared/lib';
 import { db, transaction } from '../db';
 import { DomainError } from '../http';
-import { ensureProfile } from '../profiles';
+import { requireProfile } from '../profiles';
 import { dateForDay, dayOfDate, finderDays } from './schedule';
 
 const spotsByFormat = { singles: 1, doubles: 3, hitting: 1 } as const satisfies Record<
@@ -106,7 +106,7 @@ function requireOpenGame(
 
 /** Games from now until the end of the week the finder covers, soonest first. */
 export function listOpenGames(user: User, now: Date = new Date()): readonly OpenGame[] {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const today = todayInKrakow(now);
   const until = krakowToUtc(addDays(today, finderDays + 1), '00:00').toISOString();
   const rows = db
@@ -123,7 +123,7 @@ export function listOpenGames(user: User, now: Date = new Date()): readonly Open
 }
 
 export function createGame(user: User, input: NewGame, now: Date = new Date()): OpenGame {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const court = db
     .prepare('SELECT id FROM courts WHERE city_id = ? AND name = ?')
     .get(city.id, input.court);
@@ -161,7 +161,7 @@ export function createGame(user: User, input: NewGame, now: Date = new Date()): 
 }
 
 export function deleteGame(user: User, gameId: string): void {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const game = requireGame(user.id, city.id, gameId);
   if (game.host_id !== user.id) {
     throw new DomainError('forbidden', { message: 'Only the host can remove this game.' });
@@ -171,7 +171,7 @@ export function deleteGame(user: User, gameId: string): void {
 
 /** Taking a spot is one statement, so two players cannot both get the last one. */
 export function joinGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const today = todayInKrakow(now);
 
   transaction(db, () => {
@@ -199,7 +199,7 @@ export function joinGame(user: User, gameId: string, now: Date = new Date()): Op
 }
 
 export function leaveGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   requireGame(user.id, city.id, gameId);
   db.prepare('DELETE FROM game_participants WHERE game_id = ? AND user_id = ?').run(
     gameId,
@@ -248,7 +248,7 @@ export function listCalendarEvents(
   from: IsoDate,
   to: IsoDate,
 ): readonly CalendarEvent[] {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const spanDays = (Date.parse(to) - Date.parse(from)) / 86_400_000;
   if (spanDays < 0 || spanDays > maxCalendarDays) {
     throw new DomainError('validation', {

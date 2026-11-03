@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { playerSchema, type Player, type ProfileUpdate } from '@/entities/player';
 import type { User } from '@/entities/user';
 import { distanceKm } from '@/shared/lib';
-import { defaultCityId } from '../cities';
+import { requireCity } from '../cities';
 import { db } from '../db';
 import { DomainError } from '../http';
 
@@ -70,37 +70,48 @@ function centralDistrictId(cityId: number): number {
   return closest.id;
 }
 
-/**
- * The user's profile. Accounts made before profiles existed get a starter one on first use, in
- * the given city or else the default one.
- */
-export function ensureProfile(user: User, cityId: number = defaultCityId()): Player {
-  const existing = findProfile(user.id);
-  if (existing !== undefined) return existing;
+/** The user's profile, or nothing when they have not chosen a city yet. */
+export function getProfile(user: User): Player | undefined {
+  return findProfile(user.id);
+}
+
+/** For code that only makes sense with a city. Without a profile the player must choose one first. */
+export function requireProfile(user: User): Player {
+  const profile = findProfile(user.id);
+  if (profile === undefined) {
+    throw new DomainError('forbidden', { message: 'Choose your city to continue.' });
+  }
+  return profile;
+}
+
+/** Starts the player in a city, in the district nearest its middle until they pick their own. */
+export function createProfile(user: User, cityId: number): Player {
+  requireCity(cityId);
 
   const now = new Date().toISOString();
-  db.prepare(
-    `INSERT OR IGNORE INTO profiles
-       (user_id, name, city_id, district_id, rating, formats, times, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, '["singles","doubles"]', '[]', ?, ?)`,
-  ).run(
-    user.id,
-    nameFromEmail(user.email),
-    cityId,
-    centralDistrictId(cityId),
-    defaultRating,
-    now,
-    now,
-  );
+  const { changes } = db
+    .prepare(
+      `INSERT OR IGNORE INTO profiles
+         (user_id, name, city_id, district_id, rating, formats, times, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, '["singles","doubles"]', '[]', ?, ?)`,
+    )
+    .run(
+      user.id,
+      nameFromEmail(user.email),
+      cityId,
+      centralDistrictId(cityId),
+      defaultRating,
+      now,
+      now,
+    );
+  if (changes === 0) throw new DomainError('conflict', { message: 'You already chose a city.' });
 
-  const created = findProfile(user.id);
-  if (created === undefined) throw new Error('Profile was not created');
-  return created;
+  return requireProfile(user);
 }
 
 /** Changes the name, district and level. The district has to be in the player's own city. */
 export function updateProfile(user: User, update: ProfileUpdate): Player {
-  const profile = ensureProfile(user);
+  const profile = requireProfile(user);
   const district = db
     .prepare('SELECT id FROM districts WHERE city_id = ? AND name = ?')
     .get(profile.city.id, update.neighborhood);

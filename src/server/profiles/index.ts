@@ -1,3 +1,3 @@
 import 'server-only';
 
-export { ensureProfile, updateProfile } from './profiles';
+export { createProfile, getProfile, requireProfile, updateProfile } from './profiles';

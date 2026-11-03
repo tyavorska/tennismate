@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
-import { credentialsSchema, type User } from '@/entities/user';
+import { signUpRequestSchema, type User } from '@/entities/user';
 import { checkRateLimit, createSession, createUser, EmailTakenError } from '@/server/auth';
-import { clientIp, fieldErrorsFrom, problem, readJsonBody, unexpectedProblem } from '@/server/http';
+import { requireCity } from '@/server/cities';
+import {
+  clientIp,
+  DomainError,
+  fieldErrorsFrom,
+  problem,
+  readJsonBody,
+  unexpectedProblem,
+} from '@/server/http';
+import { createProfile } from '@/server/profiles';
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const input = credentialsSchema.safeParse(await readJsonBody(request));
+  const input = signUpRequestSchema.safeParse(await readJsonBody(request));
   if (!input.success) {
     return problem('validation', { fieldErrors: fieldErrorsFrom(input.error) });
   }
@@ -18,7 +27,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
+    // Checked first, so a wrong city never leaves an account behind.
+    requireCity(input.data.cityId);
     const user = await createUser(input.data);
+    createProfile(user, input.data.cityId);
     await createSession(user.id);
     return NextResponse.json<User>(user, { status: 201 });
   } catch (error) {
@@ -27,6 +39,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         message: 'An account with this email already exists.',
         fieldErrors: { email: 'An account with this email already exists.' },
       });
+    }
+    if (error instanceof DomainError) {
+      return problem(error.kind, { message: error.publicMessage, fieldErrors: error.fieldErrors });
     }
     return unexpectedProblem('sign-up', error instanceof Error ? error : String(error));
   }

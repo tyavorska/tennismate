@@ -2,15 +2,15 @@
 import { describe, expect, it } from 'vitest';
 import { newGameSchema, ntrpRatingSchema, type NewGame } from '@/entities/player';
 import { isoDateSchema } from '@/shared/lib';
-import { createUser } from '../auth';
 import { db } from '../db';
 import { listCourts, listDistricts } from '../courts';
 import { createGame, deleteGame, joinGame, listCalendarEvents, listOpenGames } from '../games';
 import { DomainError } from '../http';
 import { listPlayers, listSavedPlayerIds, savePlayer } from '../players';
-import { ensureProfile, updateProfile } from '../profiles';
+import { getProfile, updateProfile } from '../profiles';
 import { addCity, addTournament } from '../testing/cities';
-import { defaultCityId, listCities } from './cities';
+import { createPlayer, krakowId } from '../testing/players';
+import { listCities } from './cities';
 
 // Monday 2 Nov 2026, noon in Kraków.
 const now = new Date('2026-11-02T11:00:00.000Z');
@@ -30,10 +30,8 @@ function offer(court: string): NewGame {
   });
 }
 
-async function playerIn(email: string, cityId?: number) {
-  const user = await createUser({ email, password: 'serve-and-volley' });
-  ensureProfile(user, cityId);
-  return user;
+function playerIn(email: string, cityId?: number) {
+  return createPlayer(email, cityId);
 }
 
 function kindOfError(work: () => void): string | undefined {
@@ -50,17 +48,19 @@ describe('cities', () => {
     expect(listCities().map((city) => city.slug)).toEqual(['gdansk', 'krakow']);
   });
 
-  it('starts new accounts in the first city, in the district closest to its middle', async () => {
+  it('starts an account in the district closest to the middle of its city', async () => {
     const user = await playerIn('start@example.com');
 
-    expect(ensureProfile(user).city.id).toBe(defaultCityId());
-    expect(ensureProfile(user).neighborhood).toBe('Stare Miasto');
+    expect(getProfile(user)).toMatchObject({
+      city: { id: krakowId(), name: 'Kraków' },
+      neighborhood: 'Stare Miasto',
+    });
   });
 
   it('starts an account in the city it asks for', async () => {
     const user = await playerIn('gd@example.com', gdansk.id);
 
-    expect(ensureProfile(user)).toMatchObject({
+    expect(getProfile(user)).toMatchObject({
       city: { id: gdansk.id, name: 'gdansk' },
       neighborhood: gdansk.district,
     });
@@ -71,7 +71,7 @@ describe('courts and districts', () => {
   it('only list the ones in the asked city', () => {
     expect(listCourts(gdansk.id).map((court) => court.name)).toEqual([gdansk.court]);
     expect(listDistricts(gdansk.id)).toEqual([gdansk.district]);
-    expect(listCourts(defaultCityId()).map((court) => court.name)).not.toContain(gdansk.court);
+    expect(listCourts(krakowId()).map((court) => court.name)).not.toContain(gdansk.court);
   });
 });
 

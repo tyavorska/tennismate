@@ -5,10 +5,11 @@ export {
   levelOf,
   ntrpRatingSchema,
   playerIdSchema,
+  newProfileSchema,
   playerSchema,
   profileUpdateSchema,
 } from './model/player';
-export type { NtrpRating, Player, PlayerId, ProfileUpdate } from './model/player';
+export type { NewProfile, NtrpRating, Player, PlayerId, ProfileUpdate } from './model/player';
 export {
   formatsLabel,
   matchTimeSchema,

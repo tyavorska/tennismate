@@ -2,6 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import { citySchema, type City } from '@/entities/city';
 import { db } from '../db';
+import { DomainError } from '../http';
 
 export function listCities(): readonly City[] {
   const rows = db.prepare('SELECT id, slug, name, country FROM cities').all();
@@ -11,8 +12,12 @@ export function listCities(): readonly City[] {
     .toSorted((a, b) => a.name.localeCompare(b.name, 'pl'));
 }
 
-/** The id of the city a new account starts in until sign-up asks for one. */
-export function defaultCityId(): number {
-  const row = db.prepare('SELECT id FROM cities ORDER BY id LIMIT 1').get();
-  return z.object({ id: z.number() }).parse(row).id;
+/** Throws a `validation` error for the `cityId` field when no such city is open. */
+export function requireCity(cityId: number): void {
+  const city = db.prepare('SELECT 1 AS found FROM cities WHERE id = ?').get(cityId);
+  if (city === undefined) {
+    throw new DomainError('validation', {
+      fieldErrors: { cityId: 'Choose a city from the list.' },
+    });
+  }
 }

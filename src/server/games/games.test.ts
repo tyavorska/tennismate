@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { ntrpRatingSchema, newGameSchema, type NewGame } from '@/entities/player';
-import { createUser } from '../auth';
+import { createPlayer } from '../testing/players';
 import { DomainError } from '../http';
 import {
   createGame,
@@ -30,7 +30,7 @@ function offer(overrides: Partial<NewGame> = {}): NewGame {
 }
 
 async function signUp(email: string) {
-  return createUser({ email, password: 'serve-and-volley' });
+  return createPlayer(email);
 }
 
 function expectDomainError(work: () => void, kind: string): void {

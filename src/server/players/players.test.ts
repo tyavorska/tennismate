@@ -1,16 +1,15 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { createUser } from '../auth';
+import { createPlayer } from '../testing/players';
 import { DomainError } from '../http';
-import { ensureProfile, updateProfile } from '../profiles';
+import { updateProfile } from '../profiles';
 import { ntrpRatingSchema } from '@/entities/player';
 import { listPlayers, listSavedPlayerIds, savePlayer, unsavePlayer } from './players';
 
 const rating = ntrpRatingSchema.parse(3.5);
 
 async function signUp(email: string, district: string) {
-  const user = await createUser({ email, password: 'serve-and-volley' });
-  ensureProfile(user);
+  const user = await createPlayer(email);
   updateProfile(user, { name: email.split('@')[0] ?? email, neighborhood: district, rating });
   return user;
 }

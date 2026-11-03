@@ -3,16 +3,27 @@
 import Link from 'next/link';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form } from 'react-aria-components';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
+import type { City } from '@/entities/city';
 import { applyFieldErrors } from '@/shared/lib';
-import { Button, FormAlert, FormTextField, SocialAuth, VisuallyHidden } from '@/shared/ui';
+import {
+  Button,
+  FormAlert,
+  FormTextField,
+  SelectField,
+  SocialAuth,
+  VisuallyHidden,
+  type SelectOption,
+} from '@/shared/ui';
 import { signUpDefaults, signUpSchema, type SignUpInput } from '../model/signUpSchema';
 import { useSignUp } from '../model/useSignUp';
 import styles from './SignUpForm.module.css';
 
-const fields = ['email', 'password'] as const;
+const fields = ['email', 'password', 'cityId'] as const;
 
 type SignUpFormProps = {
+  /** The cities a new account can start in. */
+  cities: readonly City[];
   /** 1 when the form is the page's main content, 2 when it sits inside a labelled dialog. */
   headingLevel?: 1 | 2;
   /** Swaps the form in place instead of navigating to the other auth page. */
@@ -43,9 +54,18 @@ function RoleIcon({ icon }: { icon: keyof typeof roleIconPaths }) {
   );
 }
 
-export function SignUpForm({ headingLevel = 2, onSwitch, layout = 'page' }: SignUpFormProps) {
+export function SignUpForm({
+  cities,
+  headingLevel = 2,
+  onSwitch,
+  layout = 'page',
+}: SignUpFormProps) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const signUp = useSignUp();
+  const cityOptions: readonly SelectOption[] = cities.map((city) => ({
+    id: String(city.id),
+    label: city.name,
+  }));
   const { control, handleSubmit, setError } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     defaultValues: signUpDefaults,
@@ -122,6 +142,20 @@ export function SignUpForm({ headingLevel = 2, onSwitch, layout = 'page' }: Sign
             type="password"
             autoComplete="new-password"
             placeholder="At least 8 characters"
+          />
+          <Controller
+            control={control}
+            name="cityId"
+            render={({ field, fieldState }) => (
+              <SelectField
+                label="City"
+                placeholder="Choose your city"
+                options={cityOptions}
+                value={field.value}
+                onChange={field.onChange}
+                error={fieldState.error?.message}
+              />
+            )}
           />
         </div>
 

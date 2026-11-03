@@ -1,3 +1,3 @@
 import 'server-only';
 
-export { defaultCityId, listCities } from './cities';
+export { listCities, requireCity } from './cities';

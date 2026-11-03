@@ -167,7 +167,8 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
   are parsed with a schema on the way out.
 - A derived value is never stored. Spots open come from `spots − participants`. `isNew` comes from
   `created_at`. `online` is `false` until presence exists.
-- Accounts made before profiles existed get a profile on first use (`ensureProfile`).
+- A profile is created only with a city (`createProfile`). An account without one is sent to
+  `/choose-city` (see Cities).
 
 ### Cities
 
@@ -180,18 +181,24 @@ The app is open in several cities. A player only ever sees, and can only act on,
   district must belong to its city, and the database enforces it with a composite foreign key.
 - **Isolation is enforced on the server**, in SQL, not in the UI. Every query for players, games,
   courts, districts, saved players, calendar events and tournaments filters by the viewer's
-  `city_id` (`ensureProfile(user).city.id`). A row from another city answers `notFound`, the same
+  `city_id` (`requireProfile(user).city.id`). A row from another city answers `notFound`, the same
   as a row that does not exist, so nothing leaks.
 - Add a cross-city test whenever a query or handler touches players, games or courts
   (`server/cities/cities.test.ts`, with `addCity` from `server/testing/cities.ts`).
 - The city shown in the UI comes from the profile (`viewer.city`). Do not hard-code a city name.
-- New accounts start in the first city, in the district nearest its centre, until sign-up asks for
-  one. Pass a `cityId` to `ensureProfile` for that.
+- **A profile always has a city, and there is no default city.** Sign-up has a required City field
+  and sends `cityId`. The server checks the city first (so a wrong one never leaves an account
+  behind), then creates the user, the profile in that city, and the session.
+- An account without a profile (a failed sign-up step, or a future social sign-in) is sent to
+  `/choose-city` by `app/(app)/layout.tsx` and by each page. That page has one required field and
+  creates the profile with `POST /api/me/profile`. A second call answers `409`, because changing
+  city is a different action with a confirm step (below). Sign-in never asks for a city.
+- Server code that needs the city calls `requireProfile(user)`, which answers `forbidden` without a
+  profile. Pages use `getProfile(user)` and redirect. Only `createProfile` makes a profile.
+- In tests, create players with `createPlayer(email, cityId?)` from `server/testing/players.ts`.
 
 **Planned, not built yet:**
 
-- City field in the sign-up form, and one `/choose-city` page for accounts with no city (social
-  sign-in). Sign-in itself never asks for a city.
 - **Changing city** (profile settings) needs a confirm step that shows the impact first
   (`GET /api/me/city/impact`). `PUT /api/me/city` with `confirm: true` then, in one transaction,
   changes the city, **cancels** the games the player hosts, removes them from the games they joined,

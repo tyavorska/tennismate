@@ -119,3 +119,12 @@
 .item[data-selected] {
   font-weight: 800;
 }
+
+.error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.select[data-invalid] .button {
+  border-color: var(--danger);
+}

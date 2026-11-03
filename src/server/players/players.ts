@@ -12,7 +12,7 @@ import type { User } from '@/entities/user';
 import { getCurrentUser } from '../auth';
 import { db } from '../db';
 import { DomainError } from '../http';
-import { ensureProfile } from '../profiles';
+import { getProfile, requireProfile } from '../profiles';
 import { distanceKm } from '@/shared/lib';
 import { fitPercent } from './matching';
 
@@ -43,7 +43,7 @@ const defaultPlayStyle = 'Social';
 /** The signed-in user's player profile. Cached per request. */
 export const getViewer = cache(async (): Promise<Player | undefined> => {
   const user = await getCurrentUser();
-  return user && ensureProfile(user);
+  return user && getProfile(user);
 });
 
 function parseJsonColumn(text: string): z.core.util.JSONType {
@@ -77,7 +77,7 @@ function toListing(
 
 /** Everyone else in the viewer's city, with distance and fit worked out from the viewer's district. */
 export function listPlayers(user: User, now: Date = new Date()): readonly PlayerListing[] {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const viewerRow = db
     .prepare(
       `SELECT profiles.rating, districts.latitude, districts.longitude FROM profiles
@@ -107,7 +107,7 @@ export function listPlayers(user: User, now: Date = new Date()): readonly Player
 
 /** Saved players in the viewer's city. Those in another city stay saved but are not shown. */
 export function listSavedPlayerIds(user: User): readonly string[] {
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   const rows = db
     .prepare(
       `SELECT saved_players.player_id FROM saved_players
@@ -123,7 +123,7 @@ export function savePlayer(user: User, playerId: string): void {
   if (playerId === user.id) {
     throw new DomainError('validation', { message: 'You cannot save your own profile.' });
   }
-  const { city } = ensureProfile(user);
+  const { city } = requireProfile(user);
   // A player in another city looks the same as one that does not exist.
   const player = db
     .prepare('SELECT 1 AS found FROM profiles WHERE user_id = ? AND city_id = ?')

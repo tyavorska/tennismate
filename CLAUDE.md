@@ -19,26 +19,31 @@ this Next.js version differs from older training data.
 | Client server-state | TanStack Query                                                          |
 | Validation          | Zod                                                                     |
 | Forms               | React Hook Form (`useForm` + `zodResolver` from `@hookform/resolvers`)  |
+| HTTP API            | REST through Next Route Handlers (`app/api/**/route.ts`)                |
+| Database            | SQLite (`node:sqlite`) now; PostgreSQL when a second instance is needed |
+| Realtime messaging  | Socket.IO in a separate Node process (not installed yet)                |
 | Tests               | Vitest + Testing Library, co-located with the code under test           |
 | Lint / format       | ESLint (`eslint-config-next` + `eslint-config-prettier`), Prettier      |
 | Runtime             | Node 24 LTS (see `.nvmrc`), npm                                         |
 
-TanStack Query, Zod, and Vitest are the chosen libraries but are not installed yet. Add them the
-first time they are needed (`@tanstack/react-query`, `zod`, `vitest` with `@testing-library/react`
-and `jsdom`). Do not substitute alternatives.
+`socket.io` and `socket.io-client` are the chosen realtime libraries but are not installed yet. Add
+them with the first messaging code. Do not substitute alternatives (no `ws`, SSE or polling for
+chat).
 
 ## Commands
 
 ```bash
 npm run dev          # dev server on http://localhost:3000
 npm run build        # production build
-npm run lint         # ESLint
+npm run lint         # ESLint and Stylelint
 npm run typecheck    # next typegen, then tsc --noEmit
+npm test             # Vitest, one run
 npm run format       # Prettier, writes changes
 npm run format:check # Prettier, read-only (CI)
 ```
 
-`lint`, `typecheck`, and `format:check` must all pass before a commit.
+`lint`, `typecheck`, `format:check`, and `test` must all pass before a commit. After adding or
+renaming a Route Handler, run `typecheck` once so `RouteContext` types are regenerated.
 
 ## Architecture: Feature-Sliced Design
 
@@ -95,11 +100,155 @@ Business rules belong in `model/` (or `entities/*/model`), never inside JSX or a
 - Client code reaches server functionality through Route Handlers or Server Actions in `app/`,
   consumed with TanStack Query.
 
+## Backend
+
+### Layout and decisions
+
+One folder per area: `server/courts`, `server/profiles`, `server/players`, `server/games`,
+`server/auth`, `server/db`, `server/http`. Each exposes an `index.ts`. Other `server/` code and
+`app/` import through it. An area may import another area, never create a cycle.
+
+| Decision      | Choice and when to change it                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| API style     | REST Route Handlers. Server Actions only for a simple form mutation with one client. No GraphQL or tRPC.                          |
+| Database      | SQLite while there is one server. Move to PostgreSQL before running two instances, and before geo search or heavy chat load.      |
+| Auth          | Server-side sessions in a `httpOnly` cookie (only the token hash is stored). JWT only if mobile clients or other services appear. |
+| Filtering     | On the client while the loaded list is small. On the server when data is large, or when a value depends on the viewer.            |
+| Viewer values | Distance and fit % are computed on the server per viewer (`server/players/matching.ts`). Never stored.                            |
+| Realtime      | Socket.IO for messaging (see below). Everything else is plain REST.                                                               |
+| Identifiers   | UUIDs for users, games and other rows. Demo players use fixed UUIDs. Court and district names are unique keys.                    |
+| Pagination    | Offset for simple lists. Cursor (`after=<id>`) for lists that grow while read, such as messages.                                  |
+
+### Route Handlers
+
+- **Every handler checks the session itself.** `src/proxy.ts` skips `/api`, so wrap each handler in
+  `handleAuthed(operation, run)` from `@/server/http`. It answers `401` with no session and turns a
+  thrown `DomainError` into its response. Anything else becomes a logged `server` problem.
+- Validate every body, query and path param with Zod before any work (`parseBody`, `parseInput`).
+  Path ids are `z.uuid()`. Query dates use `isoDateSchema`. A bad value is a `validation` problem
+  with `fieldErrors`.
+- Business code throws `DomainError(kind, { message, fieldErrors })`. It never builds HTTP
+  responses. Use `notFound` for a missing item, `forbidden` for "exists but not yours" (such as
+  deleting someone else's game), `conflict` for a full game or a game that has started.
+- Response shapes use the `Problem` body from `shared/api`. Success bodies are plain JSON typed with
+  `NextResponse.json<Type>(…)`. Deletes answer `204` with no body.
+- `PUT` and `DELETE` are idempotent: saving a saved player, joining a joined game, or leaving a game
+  you are not in succeeds and changes nothing.
+- `params` is a Promise. Type the context with the global `RouteContext<'/api/…/[id]'>` and
+  `await context.params`.
+- Authorization is per object, not just per route: check that the row belongs to the user.
+- Never return another player's email or coordinates. Players are placed by district centroid, and
+  only the distance is returned.
+
+### Database
+
+- The schema lives in `server/db/db.ts` as `CREATE TABLE IF NOT EXISTS`. **Only add tables.** Never
+  `ALTER` or drop an existing one, because a database file from earlier work already exists and
+  `IF NOT EXISTS` will not change it. Foreign keys are on, with `ON DELETE CASCADE` for data that
+  belongs to a user.
+- `initialize` runs on every module load, so everything in it is safe to repeat.
+- Reference data (districts, courts) is seeded in every environment with `INSERT OR IGNORE`.
+- **Demo data is development-only** (`NODE_ENV === 'development'`), idempotent and non-destructive:
+  demo games are replaced only once all of them have passed, so a restart never undoes a join.
+  Demo players are real `users` rows with the password hash `!`, which no password matches.
+- Use `transaction(db, work)` for multi-step writes. When a rule must hold under concurrent writes,
+  put it in one SQL statement (joining a game is `INSERT … WHERE taken < spots`), not in
+  "read, check, write".
+- Parse every row with Zod, as `server/auth/users.ts` does. JSON text columns (`formats`, `times`)
+  are parsed with a schema on the way out.
+- A derived value is never stored. Spots open come from `spots − participants`. `isNew` comes from
+  `created_at`. `online` is `false` until presence exists.
+- Accounts made before profiles existed get a profile on first use (`ensureProfile`).
+
+### Time
+
+- Store instants as UTC ISO strings (`starts_at`). Store plain dates as `YYYY-MM-DD`.
+- Convert with `krakowToUtc`, `toKrakowWallClock`, `todayInKrakow` and `nextWeekday` from
+  `@/shared/lib`. They use `Europe/Warsaw` and follow daylight saving. Never use the server's local
+  time.
+- The finder's `Today / Tomorrow / Sat / Sun` is a display of a real date, not data. Only games in
+  the next 7 days with one of those names appear in the finder. The calendar shows every date.
+
+### Client data
+
+- One key factory per entity, built with `queryOptions` so cache reads are typed:
+  `entities/player/api/playerQueries.ts`, `openGameQueries.ts`, `entities/game/api/calendarQueries.ts`.
+- A page that needs data for its first render prefetches it by calling the **server function
+  directly** (not its own API, since cookies do not forward), under the same `queryKey`, and hands
+  it over with `HydrationBoundary`. Data that does not change on the client (players, courts) goes
+  in as props.
+- `QueryProvider` sets `staleTime` to 30 s so handed-over data is not refetched at once.
+- Mutation hooks live in the feature that owns the action (`save-player`, `join-game`,
+  `offer-game`, `edit-profile`). They update or invalidate through the key factories. Saving a
+  player updates the cache at once and rolls back on error. Other writes take the server's answer
+  and put it in the cache. After a profile change call `router.refresh()`, because the header
+  reads the profile on the server.
+- Failures follow the `error-handling` skill. A select cannot show its own error, so server
+  `fieldErrors` for selects are joined into the form's `FormAlert` (`messagesForFields`). The form
+  keeps everything typed. A failed refresh keeps the data already loaded and offers a retry.
+
+### Tests for backend code
+
+- Server tests start with `// @vitest-environment node` and use the in-memory database
+  (`DATABASE_PATH=:memory:` in `vitest.config.mts`). Create users with `createUser`. Pass `now`
+  into functions that depend on time, so tests do not depend on the clock.
+- Test the failure branch: full game, game that has started, wrong owner, unknown id, bad range.
+- Pure helpers (`matching`, `schedule`, `krakowTime`) get plain unit tests.
+- Client tests use `createTestQueryClient` and `renderWithQuery` from `@/shared/testing`, put data
+  in the cache with `setQueryData`, and stub `fetch` with a small in-memory fake of the API.
+
+### Realtime messaging: Socket.IO
+
+Messaging uses Socket.IO. Route Handlers cannot hold a WebSocket open, so the design is:
+
+- **Separate Node process.** Run the Socket.IO server as its own process (`npm run realtime`) that
+  imports the same `server/` modules as the web app. It cannot run on a serverless host. Deploy it
+  where long-lived connections work.
+- **REST for history, sockets for live events.** Conversations, message history (cursor
+  pagination), unread counts and mark-as-read are Route Handlers. The socket only delivers new
+  messages, read receipts and presence.
+- **Persist first, then emit.** A message is written to the database, then emitted. The sender
+  gets an acknowledgement. The client sends a `clientMessageId` that is unique per conversation, so
+  a resend after a dropped connection never creates a duplicate.
+- **Authenticate the handshake** with the same session cookie. Look the token hash up with the
+  `server/auth` code in an `io.use` middleware, and refuse the connection without a valid session.
+  Check on every event that the user is a member of the conversation.
+- **Validate every event payload with Zod.** Event schemas live in `entities/conversation/model`,
+  next to the message and conversation schemas, so server and client share them.
+- **Rooms.** One room per user (`user:<id>`), so every open tab of the recipient gets the message.
+  Do not rely on one socket per user.
+- **Unread** is `last_read_message_id` per conversation member. Do not keep a boolean.
+- **Reconnect.** After a reconnect the client fetches what it missed from
+  `GET /api/conversations/:id/messages?after=<id>`. Never rely only on the socket buffer.
+- **Client.** One socket per tab, created in a provider in `app/providers`. Incoming events update
+  the TanStack Query cache with `setQueryData`. They do not create a second copy of the data in
+  state. A failed send keeps the text in the input and shows the error.
+- **More than one instance** needs the Redis adapter (`@socket.io/redis-adapter`) so a message
+  reaches a recipient connected to another instance. Presence (`online`) is then kept in Redis with
+  a short TTL.
+- **Conversations are unique per pair of users** (`user_a < user_b` with a `UNIQUE` constraint). Create
+  one on the first message, not when a chat is opened.
+
+### What is still sample data
+
+Replace these with the same pattern (table, `server/` module, Route Handler, query key) when they
+are built. Until then they stay clearly marked as samples and must not be mixed into real data.
+
+- Inbox and chat (`entities/conversation`, invite courts and slots) until the Socket.IO work.
+- "Next games" (`entities/game`) and the dashboard cards. They disagree with the real calendar.
+- "Who's free" faces on the calendar (needs an availability model).
+- Change password, delete account, notification settings.
+- The level quiz result only changes the filter locally. It does not save to the profile.
+- `online` is always `false`. `freeTonight` and `wantsDoublesPartner` are stored flags until
+  availability exists.
+- Ranking, tournaments news, court offers, payments and bookings do not exist yet.
+
 ## Next.js App Router conventions
 
 - `src/app/` contains only Next routing files (`layout.tsx`, `page.tsx`, `loading.tsx`,
   `error.tsx`, `not-found.tsx`, `route.ts`), `providers/`, and `globals.css`. Route files are thin:
-  a `page.tsx` renders one component from `views/` and nothing else.
+  a `page.tsx` renders one component from `views/`. The only other thing it may do is load that
+  page's data on the server (session check, prefetch, `HydrationBoundary`) and pass it in.
 - Server Components by default. Add `'use client'` only at the leaves that need state, effects, or
   browser APIs.
 - `params` and `searchParams` are Promises. `await` them.

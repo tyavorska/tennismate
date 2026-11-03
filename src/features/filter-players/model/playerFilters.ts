@@ -199,7 +199,7 @@ export type PlaceRow = Readonly<{
   kind: 'district' | 'court';
 }>;
 
-const byName = (a: string, b: string): number => a.localeCompare(b, 'pl');
+const byName = (a: string, b: string): number => a.localeCompare(b, 'pl', { numeric: true });
 
 /** Districts in alphabetical order, each followed by its courts. */
 export function placeRowsOf(

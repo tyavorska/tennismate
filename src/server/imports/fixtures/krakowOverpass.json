@@ -1,0 +1,574 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API (trimmed for tests)",
+  "osm3s": {
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "way",
+      "id": 37674002,
+      "center": {
+        "lat": 50.0112271,
+        "lon": 20.0194387
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "no",
+        "name": "Klub Sportowy Baszta",
+        "sport": "tennis",
+        "surface": "tartan"
+      }
+    },
+    {
+      "type": "way",
+      "id": 39448492,
+      "center": {
+        "lat": 50.0905329,
+        "lon": 19.8878608
+      },
+      "tags": {
+        "leisure": "pitch",
+        "name": "Prywatny kort tenisowy IFJ",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 80152671,
+      "center": {
+        "lat": 50.0701219,
+        "lon": 20.0022227
+      },
+      "tags": {
+        "leisure": "pitch",
+        "name": "Hala Tenisowa",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161972376,
+      "center": {
+        "lat": 50.0183538,
+        "lon": 19.9041575
+      },
+      "tags": {
+        "leisure": "sports_centre",
+        "name": "Cascada",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 231009349,
+      "center": {
+        "lat": 50.0340119,
+        "lon": 19.9010508
+      },
+      "tags": {
+        "leisure": "pitch",
+        "name": "Tenis Wojar Academy",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1506762794,
+      "center": {
+        "lat": 50.0553313,
+        "lon": 19.9495388
+      },
+      "tags": {
+        "leisure": "sports_centre",
+        "name": "Korty tenisowe KKS Olsza",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 79710276,
+      "center": {
+        "lat": 50.0652095,
+        "lon": 19.979686
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 79736772,
+      "center": {
+        "lat": 50.0740277,
+        "lon": 19.9878202
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "synthetic"
+      }
+    },
+    {
+      "type": "way",
+      "id": 80055285,
+      "center": {
+        "lat": 50.0506098,
+        "lon": 19.9463305
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 83334063,
+      "center": {
+        "lat": 50.0855704,
+        "lon": 19.9992957
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 83334093,
+      "center": {
+        "lat": 50.0855122,
+        "lon": 19.9986892
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 83334099,
+      "center": {
+        "lat": 50.0857017,
+        "lon": 19.9986656
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 83334109,
+      "center": {
+        "lat": 50.0856743,
+        "lon": 19.9981342
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 83334152,
+      "center": {
+        "lat": 50.0854848,
+        "lon": 19.998157
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 95319969,
+      "center": {
+        "lat": 50.0060053,
+        "lon": 19.9607719
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 100311356,
+      "center": {
+        "lat": 50.0510568,
+        "lon": 19.9361516
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "no",
+        "sport": "tennis",
+        "surface": "tartan"
+      }
+    },
+    {
+      "type": "way",
+      "id": 100311357,
+      "center": {
+        "lat": 50.0507784,
+        "lon": 19.9364386
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "no",
+        "sport": "tennis",
+        "surface": "tartan"
+      }
+    },
+    {
+      "type": "way",
+      "id": 102365256,
+      "center": {
+        "lat": 50.0972743,
+        "lon": 19.9368234
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis",
+        "surface": "tartan"
+      }
+    },
+    {
+      "type": "way",
+      "id": 129123390,
+      "center": {
+        "lat": 50.0170301,
+        "lon": 19.9205542
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 131582596,
+      "center": {
+        "lat": 50.0659862,
+        "lon": 19.902414
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 131582600,
+      "center": {
+        "lat": 50.0659888,
+        "lon": 19.9022084
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 137069002,
+      "center": {
+        "lat": 50.0601115,
+        "lon": 19.9610719
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "artificial_turf"
+      }
+    },
+    {
+      "type": "way",
+      "id": 149923424,
+      "center": {
+        "lat": 50.0251863,
+        "lon": 19.9761836
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "tartan"
+      }
+    },
+    {
+      "type": "way",
+      "id": 151506209,
+      "center": {
+        "lat": 50.0157803,
+        "lon": 19.979009
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 151506210,
+      "center": {
+        "lat": 50.0159199,
+        "lon": 19.9789373
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161704226,
+      "center": {
+        "lat": 50.0583038,
+        "lon": 19.9072027
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161704228,
+      "center": {
+        "lat": 50.0580276,
+        "lon": 19.9069148
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161704230,
+      "center": {
+        "lat": 50.0584369,
+        "lon": 19.9077133
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161704231,
+      "center": {
+        "lat": 50.0582036,
+        "lon": 19.9073541
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 161704232,
+      "center": {
+        "lat": 50.0585383,
+        "lon": 19.9075634
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 162073088,
+      "center": {
+        "lat": 50.0755574,
+        "lon": 19.8832104
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 165616888,
+      "center": {
+        "lat": 50.0278816,
+        "lon": 19.9251407
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 166697229,
+      "center": {
+        "lat": 50.0785137,
+        "lon": 19.8652135
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis"
+      }
+    },
+    {
+      "type": "way",
+      "id": 173536906,
+      "center": {
+        "lat": 50.0771518,
+        "lon": 19.9109726
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 173536907,
+      "center": {
+        "lat": 50.076864,
+        "lon": 19.9105118
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 173536908,
+      "center": {
+        "lat": 50.0770906,
+        "lon": 19.9112109
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 173536909,
+      "center": {
+        "lat": 50.0772027,
+        "lon": 19.9107089
+      },
+      "tags": {
+        "leisure": "pitch",
+        "lit": "yes",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 185688053,
+      "center": {
+        "lat": 49.9989265,
+        "lon": 19.9158602
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis",
+        "surface": "clay"
+      }
+    },
+    {
+      "type": "way",
+      "id": 186071642,
+      "center": {
+        "lat": 50.0223295,
+        "lon": 19.8689729
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis",
+        "surface": "concrete"
+      }
+    },
+    {
+      "type": "way",
+      "id": 186071643,
+      "center": {
+        "lat": 50.0226276,
+        "lon": 19.8691724
+      },
+      "tags": {
+        "leisure": "pitch",
+        "sport": "tennis",
+        "surface": "concrete"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1,
+      "lat": 50.0516,
+      "lon": 19.9467,
+      "tags": {
+        "place": "suburb",
+        "name": "Kazimierz"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2,
+      "lat": 50.0421,
+      "lon": 19.9507,
+      "tags": {
+        "place": "suburb",
+        "name": "Podgórze"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3,
+      "lat": 50.0722,
+      "lon": 20.0371,
+      "tags": {
+        "place": "suburb",
+        "name": "Nowa Huta"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4,
+      "lat": 50.0905,
+      "lon": 19.9603,
+      "tags": {
+        "place": "city_district",
+        "name": "Prądnik Biały"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5,
+      "lat": 50.0614,
+      "lon": 19.9366,
+      "tags": {
+        "place": "suburb"
+      }
+    }
+  ]
+}

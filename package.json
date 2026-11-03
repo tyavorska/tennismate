@@ -11,7 +11,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "import:cities": "NODE_ENV=production tsx --conditions=react-server scripts/import-cities.ts",
+    "import:courts": "NODE_ENV=production tsx --conditions=react-server scripts/import-courts.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",
@@ -38,6 +40,7 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.9.7",
     "stylelint": "^17.16.0",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
   }

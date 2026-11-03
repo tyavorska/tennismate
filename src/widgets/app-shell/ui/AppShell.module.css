@@ -155,3 +155,20 @@
     display: none;
   }
 }
+
+.footer {
+  padding: var(--space-6) var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.footerLink {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.footerLink:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--space-1);
+}

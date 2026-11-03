@@ -10,10 +10,10 @@ import {
 } from '@/entities/player';
 import type { User } from '@/entities/user';
 import { getCurrentUser } from '../auth';
+import { distanceKm } from '@/shared/lib';
 import { db } from '../db';
 import { DomainError } from '../http';
 import { getProfile, requireProfile } from '../profiles';
-import { distanceKm } from '@/shared/lib';
 import { fitPercent } from './matching';
 
 const newPlayerDays = 14;

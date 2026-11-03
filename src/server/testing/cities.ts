@@ -5,12 +5,12 @@ import { db } from '../db';
 export type TestCity = Readonly<{ id: number; district: string; court: string }>;
 
 /** A second city with one district and one court, for tests that check the cities stay apart. */
-export function addCity(slug: string): TestCity {
+export function addCity(slug: string, timezone = 'Europe/Warsaw'): TestCity {
   const insertCity = db.prepare(
     `INSERT INTO cities (slug, name, country, timezone, latitude, longitude)
-     VALUES (?, ?, 'PL', 'Europe/Warsaw', 54.35, 18.65)`,
+     VALUES (?, ?, 'PL', ?, 54.35, 18.65)`,
   );
-  const { lastInsertRowid } = insertCity.run(slug, slug);
+  const { lastInsertRowid } = insertCity.run(slug, slug, timezone);
   const id = z.coerce.number().parse(lastInsertRowid);
 
   const district = `${slug} Centre`;

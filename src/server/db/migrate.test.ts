@@ -134,6 +134,57 @@ describe('migrate', () => {
     });
   });
 
+  describe('court sources', () => {
+    it('marks the courts that exist as demo courts and links Kraków to GeoNames', () => {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 2));
+      database.exec(`INSERT INTO districts (city_id, name, latitude, longitude)
+                     VALUES (1, 'Kazimierz', 50.05, 19.94);
+                     INSERT INTO courts (city_id, district_id, name)
+                     VALUES (1, (SELECT id FROM districts WHERE name = 'Kazimierz'), 'Old Court')`);
+
+      migrate(database);
+
+      expect(
+        database.prepare("SELECT source, removed_at FROM courts WHERE name = 'Old Court'").get(),
+      ).toMatchObject({
+        source: 'demo',
+        removed_at: null,
+      });
+      expect(
+        database.prepare("SELECT geonames_id FROM cities WHERE slug = 'krakow'").get()?.geonames_id,
+      ).toBe(3094802);
+    });
+
+    it('keeps an OSM element once per city, so a re-import finds the court it made', () => {
+      const database = openDatabase();
+      migrate(database);
+      database.exec(`INSERT INTO districts (city_id, name, latitude, longitude) VALUES (1, 'D', 0, 0);
+                     INSERT INTO courts (city_id, district_id, name, source) VALUES (1, (SELECT id FROM districts WHERE name = 'D'), 'C', 'osm');
+                     INSERT INTO court_osm_elements (city_id, osm_type, osm_id, court_id) VALUES (1, 'way', 5, (SELECT id FROM courts WHERE name = 'C'))`);
+
+      expect(() =>
+        database.exec(
+          `INSERT INTO court_osm_elements (city_id, osm_type, osm_id, court_id) VALUES (1, 'way', 5, 1)`,
+        ),
+      ).toThrow();
+    });
+
+    it('moves existing elements to the city of their court', () => {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 3));
+      database.exec(`INSERT INTO districts (city_id, name, latitude, longitude) VALUES (1, 'D', 0, 0);
+                     INSERT INTO courts (city_id, district_id, name, source) VALUES (1, (SELECT id FROM districts WHERE name = 'D'), 'C', 'osm');
+                     INSERT INTO court_osm_elements (osm_type, osm_id, court_id) VALUES ('way', 5, (SELECT id FROM courts WHERE name = 'C'))`);
+
+      migrate(database);
+
+      expect(database.prepare('SELECT city_id, osm_id FROM court_osm_elements').all()).toEqual([
+        expect.objectContaining({ city_id: 1, osm_id: 5 }),
+      ]);
+    });
+  });
+
   describe('when a migration fails', () => {
     const failing: Migration = {
       version: 2,

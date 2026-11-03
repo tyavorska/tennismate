@@ -9,20 +9,23 @@ import {
   openGameSchema,
   type NewGame,
   type OpenGame,
+  type Player,
 } from '@/entities/player';
 import type { User } from '@/entities/user';
 import {
   addDays,
   isoDateSchema,
-  krakowToUtc,
-  toKrakowWallClock,
-  todayInKrakow,
+  toWallClock,
+  todayIn,
+  zonedToUtc,
   type IsoDate,
 } from '@/shared/lib';
 import { db, transaction } from '../db';
 import { DomainError } from '../http';
 import { requireProfile } from '../profiles';
 import { dateForDay, dayOfDate, finderDays } from './schedule';
+
+type CityRef = Player['city'];
 
 const spotsByFormat = { singles: 1, doubles: 3, hitting: 1 } as const satisfies Record<
   z.infer<typeof gameFormatSchema>,
@@ -55,8 +58,13 @@ const selectGames = `
   JOIN courts ON courts.id = games.court_id
   JOIN districts ON districts.id = courts.district_id`;
 
-function toOpenGame(row: GameRow, viewerId: string, today: IsoDate): OpenGame | undefined {
-  const { date, time } = toKrakowWallClock(new Date(row.starts_at));
+function toOpenGame(
+  row: GameRow,
+  viewerId: string,
+  today: IsoDate,
+  timeZone: string,
+): OpenGame | undefined {
+  const { date, time } = toWallClock(new Date(row.starts_at), timeZone);
   const day = dayOfDate(date, today);
   if (day === undefined) return undefined;
 
@@ -94,21 +102,22 @@ function requireGame(viewerId: string, cityId: number, gameId: string): GameRow 
 
 function requireOpenGame(
   viewerId: string,
-  cityId: number,
+  city: CityRef,
   gameId: string,
   today: IsoDate,
 ): OpenGame {
-  const game = toOpenGame(requireGame(viewerId, cityId, gameId), viewerId, today);
-  if (game === undefined)
+  const game = toOpenGame(requireGame(viewerId, city.id, gameId), viewerId, today, city.timezone);
+  if (game === undefined) {
     throw new DomainError('notFound', { message: 'This game is no longer listed.' });
+  }
   return game;
 }
 
 /** Games from now until the end of the week the finder covers, soonest first. */
 export function listOpenGames(user: User, now: Date = new Date()): readonly OpenGame[] {
   const { city } = requireProfile(user);
-  const today = todayInKrakow(now);
-  const until = krakowToUtc(addDays(today, finderDays + 1), '00:00').toISOString();
+  const today = todayIn(now, city.timezone);
+  const until = zonedToUtc(addDays(today, finderDays + 1), '00:00', city.timezone).toISOString();
   const rows = db
     .prepare(
       `${selectGames} WHERE courts.city_id = ? AND games.starts_at >= ? AND games.starts_at < ?
@@ -119,13 +128,13 @@ export function listOpenGames(user: User, now: Date = new Date()): readonly Open
   return z
     .array(gameRowSchema)
     .parse(rows)
-    .flatMap((row) => toOpenGame(row, user.id, today) ?? []);
+    .flatMap((row) => toOpenGame(row, user.id, today, city.timezone) ?? []);
 }
 
 export function createGame(user: User, input: NewGame, now: Date = new Date()): OpenGame {
   const { city } = requireProfile(user);
   const court = db
-    .prepare('SELECT id FROM courts WHERE city_id = ? AND name = ?')
+    .prepare('SELECT id FROM courts WHERE city_id = ? AND name = ? AND removed_at IS NULL')
     .get(city.id, input.court);
   if (court === undefined) {
     throw new DomainError('validation', {
@@ -133,8 +142,8 @@ export function createGame(user: User, input: NewGame, now: Date = new Date()): 
     });
   }
 
-  const today = todayInKrakow(now);
-  const startsAt = krakowToUtc(dateForDay(input.day, today), input.time);
+  const today = todayIn(now, city.timezone);
+  const startsAt = zonedToUtc(dateForDay(input.day, today), input.time, city.timezone);
   if (startsAt.getTime() <= now.getTime()) {
     throw new DomainError('validation', {
       fieldErrors: { time: 'Choose a time that has not passed.' },
@@ -157,7 +166,7 @@ export function createGame(user: User, input: NewGame, now: Date = new Date()): 
     input.note.trim(),
     now.toISOString(),
   );
-  return requireOpenGame(user.id, city.id, id, today);
+  return requireOpenGame(user.id, city, id, today);
 }
 
 export function deleteGame(user: User, gameId: string): void {
@@ -172,7 +181,7 @@ export function deleteGame(user: User, gameId: string): void {
 /** Taking a spot is one statement, so two players cannot both get the last one. */
 export function joinGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
   const { city } = requireProfile(user);
-  const today = todayInKrakow(now);
+  const today = todayIn(now, city.timezone);
 
   transaction(db, () => {
     const game = requireGame(user.id, city.id, gameId);
@@ -195,7 +204,7 @@ export function joinGame(user: User, gameId: string, now: Date = new Date()): Op
     if (changes === 0) throw new DomainError('conflict', { message: 'This game is full.' });
   });
 
-  return requireOpenGame(user.id, city.id, gameId, today);
+  return requireOpenGame(user.id, city, gameId, today);
 }
 
 export function leaveGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
@@ -205,7 +214,7 @@ export function leaveGame(user: User, gameId: string, now: Date = new Date()): O
     gameId,
     user.id,
   );
-  return requireOpenGame(user.id, city.id, gameId, todayInKrakow(now));
+  return requireOpenGame(user.id, city, gameId, todayIn(now, city.timezone));
 }
 
 const maxCalendarDays = 62;
@@ -217,8 +226,12 @@ const tournamentRowSchema = z.object({
   venue: z.string(),
 });
 
-function toCalendarEvent(row: GameRow, viewerId: string): CalendarEvent | undefined {
-  const { date, time } = toKrakowWallClock(new Date(row.starts_at));
+function toCalendarEvent(
+  row: GameRow,
+  viewerId: string,
+  timeZone: string,
+): CalendarEvent | undefined {
+  const { date, time } = toWallClock(new Date(row.starts_at), timeZone);
   const format = gameFormatLabels[row.format];
   const base = { id: row.id, date, time, court: row.court };
 
@@ -264,8 +277,8 @@ export function listCalendarEvents(
     .all(
       user.id,
       city.id,
-      krakowToUtc(from, '00:00').toISOString(),
-      krakowToUtc(addDays(to, 1), '00:00').toISOString(),
+      zonedToUtc(from, '00:00', city.timezone).toISOString(),
+      zonedToUtc(addDays(to, 1), '00:00', city.timezone).toISOString(),
     );
   const tournamentRows = db
     .prepare(
@@ -278,7 +291,7 @@ export function listCalendarEvents(
   const games = z
     .array(gameRowSchema)
     .parse(gameRows)
-    .flatMap((row) => toCalendarEvent(row, user.id) ?? []);
+    .flatMap((row) => toCalendarEvent(row, user.id, city.timezone) ?? []);
   const tournaments = z
     .array(tournamentRowSchema)
     .parse(tournamentRows)

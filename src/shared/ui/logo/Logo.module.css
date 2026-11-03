@@ -1,18 +1,18 @@
-/* Size it with --logo-size (3rem by default); the ball and gap scale with it. */
+/* Size it with --logo-size (3rem by default); the ball and gap scale with it. --logo-ball, --logo-gap and --logo-lh tune a bar variant. */
 .logo {
   display: inline-flex;
   align-items: flex-end;
-  gap: 0.0417em;
+  gap: var(--logo-gap, 0.0417em);
   font-family: var(--font-display);
   font-size: var(--logo-size, 3rem);
   font-weight: 800;
-  line-height: 1.4583;
+  line-height: var(--logo-lh, 1.4583);
   letter-spacing: 0.01em;
 }
 
 .ball {
   flex-shrink: 0;
-  width: 0.2708em;
-  height: 0.2708em;
+  width: var(--logo-ball, 0.2708em);
+  height: var(--logo-ball, 0.2708em);
   fill: var(--ball);
 }

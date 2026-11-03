@@ -43,7 +43,7 @@ async function errorFromResponse(response: Response): Promise<ApiError> {
 }
 
 type ApiFetchOptions<TSchema extends z.ZodType> = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: z.core.util.JSONType;
   schema: TSchema;
 };

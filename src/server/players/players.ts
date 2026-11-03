@@ -1,151 +1,129 @@
 import 'server-only';
 import { cache } from 'react';
 import { z } from 'zod';
-import { playerSchema, type Player } from '@/entities/player';
+import {
+  matchTimeSchema,
+  playerListingSchema,
+  playFormatSchema,
+  type Player,
+  type PlayerListing,
+} from '@/entities/player';
 import type { User } from '@/entities/user';
 import { getCurrentUser } from '../auth';
+import { db } from '../db';
+import { DomainError } from '../http';
+import { ensureProfile } from '../profiles';
+import { distanceKm, fitPercent } from './matching';
 
-// Sample players until profiles are stored in the database. Parsed so they match the schema.
-const samplePlayers: readonly Player[] = z.array(playerSchema).parse([
-  {
-    id: 'maya-okafor',
-    name: 'Maya Okafor',
-    rating: 3,
-    about: 'Consistent baseliner working on my net game. Happy to rally or play sets.',
-    neighborhood: 'Rittenhouse',
-    location: { latitude: 39.9496, longitude: -75.1718 },
-    lastActiveDaysAgo: 0,
-    gamesPlayed: 18,
-    readyToPlay: true,
-    playTimes: ['weekdayEvening', 'weekends'],
-    homeCourts: ['Schuylkill River Park', 'Fairmount Park'],
-  },
-  {
-    id: 'daniel-reyes',
-    name: 'Daniel Reyes',
-    rating: 3.5,
-    about: 'Former high school player getting back into it. Looking for competitive sets.',
-    neighborhood: 'Fishtown',
-    location: { latitude: 39.9713, longitude: -75.1346 },
-    lastActiveDaysAgo: 1,
-    gamesPlayed: 31,
-    readyToPlay: false,
-    playTimes: ['weekdayEvening', 'weekdayMorning'],
-    homeCourts: ['Penn Treaty Park', 'Fairmount Park'],
-  },
-  {
-    id: 'priya-nair',
-    name: 'Priya Nair',
-    rating: 3,
-    about: 'Doubles lover. Always up for a hit after work.',
-    neighborhood: 'University City',
-    location: { latitude: 39.9522, longitude: -75.1932 },
-    lastActiveDaysAgo: 2,
-    gamesPlayed: 9,
-    readyToPlay: true,
-    playTimes: ['flexible'],
-    homeCourts: ['Penn Hamlin Courts'],
-  },
-  {
-    id: 'sam-whitaker',
-    name: 'Sam Whitaker',
-    rating: 2.5,
-    about: 'Beginner, can hold a rally. Just looking for some practice.',
-    neighborhood: 'Northern Liberties',
-    location: { latitude: 39.9644, longitude: -75.1416 },
-    lastActiveDaysAgo: 17,
-    gamesPlayed: 1,
-    readyToPlay: false,
-    playTimes: ['weekdayDaytime', 'weekends'],
-    homeCourts: ['Fairmount Park', 'Seger Park'],
-  },
-  {
-    id: 'lena-kowalski',
-    name: 'Lena Kowalski',
-    rating: 4,
-    about: 'Lefty with a big serve. Training for a USTA league this spring.',
-    neighborhood: 'Manayunk',
-    location: { latitude: 40.0262, longitude: -75.2249 },
-    lastActiveDaysAgo: 3,
-    gamesPlayed: 54,
-    readyToPlay: true,
-    playTimes: ['weekdayMorning', 'weekends'],
-    homeCourts: ['Kelly Drive Courts'],
-  },
-  {
-    id: 'marcus-bell',
-    name: 'Marcus Bell',
-    rating: 3,
-    about: 'Weekend warrior. Let’s play a set and grab coffee after.',
-    neighborhood: 'South Philly',
-    location: { latitude: 39.9259, longitude: -75.1696 },
-    lastActiveDaysAgo: 0,
-    gamesPlayed: 22,
-    readyToPlay: false,
-    playTimes: ['weekends'],
-    homeCourts: ['FDR Park', 'Seger Park'],
-  },
-  {
-    id: 'aiko-tanaka',
-    name: 'Aiko Tanaka',
-    rating: 5,
-    about: 'Ex-college player. Coaching on the side, open to hitting with motivated players.',
-    neighborhood: 'Chestnut Hill',
-    location: { latitude: 40.0766, longitude: -75.2077 },
-    lastActiveDaysAgo: 6,
-    gamesPlayed: 80,
-    readyToPlay: false,
-    playTimes: ['weekdayDaytime'],
-    homeCourts: ['Chestnut Hill Tennis Club'],
-  },
-  {
-    id: 'jordan-price',
-    name: 'Jordan Price',
-    rating: 3.5,
-    about: '',
-    neighborhood: 'Old City',
-    location: { latitude: 39.9526, longitude: -75.1446 },
-    lastActiveDaysAgo: 4,
-    gamesPlayed: 12,
-    readyToPlay: true,
-    playTimes: ['weekdayEvening'],
-    homeCourts: ['Schuylkill River Park'],
-  },
-]);
+const newPlayerDays = 14;
+const dayMs = 86_400_000;
 
-/** "ana.smith@example.com" becomes "Ana Smith". */
-function nameFromEmail(email: string): string {
-  const localPart = email.split('@')[0] ?? email;
-  return localPart
-    .split(/[._+-]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
+const listingRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  age: z.number().nullable(),
+  rating: z.number(),
+  district: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  play_style: z.string().nullable(),
+  formats: z.string(),
+  times: z.string(),
+  free_tonight: z.number(),
+  wants_doubles_partner: z.number(),
+  created_at: z.string(),
+});
 
-// Every account gets the same starter profile until users can edit their own.
-function toViewerProfile(user: User): Player {
-  return playerSchema.parse({
-    id: user.id,
-    name: nameFromEmail(user.email),
-    rating: 3,
-    about: '',
-    neighborhood: 'Center City',
-    location: { latitude: 39.9526, longitude: -75.1652 },
-    lastActiveDaysAgo: 0,
-    gamesPlayed: 0,
-    readyToPlay: false,
-    playTimes: ['weekdayEvening', 'weekends'],
-    homeCourts: ['Fairmount Park', 'Schuylkill River Park'],
-  });
-}
+const formatsSchema = z.array(playFormatSchema).min(1);
+const timesSchema = z.array(matchTimeSchema);
+
+const defaultPlayStyle = 'Social';
 
 /** The signed-in user's player profile. Cached per request. */
 export const getViewer = cache(async (): Promise<Player | undefined> => {
   const user = await getCurrentUser();
-  return user && toViewerProfile(user);
+  return user && ensureProfile(user);
 });
 
-export function listPlayers(): readonly Player[] {
-  return samplePlayers;
+function parseJsonColumn(text: string): z.core.util.JSONType {
+  return JSON.parse(text);
+}
+
+function toListing(
+  row: z.infer<typeof listingRowSchema>,
+  viewer: Readonly<{ rating: number; latitude: number; longitude: number }>,
+  now: Date,
+): PlayerListing {
+  const km = distanceKm(viewer, row);
+  const joinedMs = new Date(row.created_at).getTime();
+  return playerListingSchema.parse({
+    id: row.id,
+    name: row.name,
+    age: row.age ?? undefined,
+    rating: row.rating,
+    district: row.district,
+    distanceKm: km,
+    fitPercent: fitPercent(viewer.rating, row.rating, km),
+    playStyle: row.play_style ?? defaultPlayStyle,
+    formats: formatsSchema.parse(parseJsonColumn(row.formats)),
+    times: timesSchema.parse(parseJsonColumn(row.times)),
+    freeTonight: row.free_tonight === 1,
+    online: false,
+    isNew: now.getTime() - joinedMs < newPlayerDays * dayMs,
+    wantsDoublesPartner: row.wants_doubles_partner === 1,
+  });
+}
+
+/** Everyone except the viewer, with distance and fit worked out from the viewer's district. */
+export function listPlayers(user: User, now: Date = new Date()): readonly PlayerListing[] {
+  ensureProfile(user);
+  const viewerRow = db
+    .prepare(
+      `SELECT profiles.rating, districts.latitude, districts.longitude FROM profiles
+       JOIN districts ON districts.name = profiles.district WHERE profiles.user_id = ?`,
+    )
+    .get(user.id);
+  const viewer = z
+    .object({ rating: z.number(), latitude: z.number(), longitude: z.number() })
+    .parse(viewerRow);
+
+  const rows = db
+    .prepare(
+      `SELECT profiles.user_id AS id, profiles.name, profiles.age, profiles.rating,
+              profiles.district, districts.latitude, districts.longitude, profiles.play_style,
+              profiles.formats, profiles.times, profiles.free_tonight,
+              profiles.wants_doubles_partner, profiles.created_at
+       FROM profiles JOIN districts ON districts.name = profiles.district
+       WHERE profiles.user_id != ?`,
+    )
+    .all(user.id);
+
+  return z
+    .array(listingRowSchema)
+    .parse(rows)
+    .map((row) => toListing(row, viewer, now));
+}
+
+export function listSavedPlayerIds(userId: string): readonly string[] {
+  const rows = db
+    .prepare('SELECT player_id FROM saved_players WHERE user_id = ? ORDER BY created_at')
+    .all(userId);
+  return z.array(z.string()).parse(rows.map((row) => row.player_id));
+}
+
+export function savePlayer(userId: string, playerId: string): void {
+  if (playerId === userId) {
+    throw new DomainError('validation', { message: 'You cannot save your own profile.' });
+  }
+  const player = db.prepare('SELECT 1 AS found FROM profiles WHERE user_id = ?').get(playerId);
+  if (player === undefined)
+    throw new DomainError('notFound', { message: 'This player no longer exists.' });
+
+  db.prepare(
+    'INSERT OR IGNORE INTO saved_players (user_id, player_id, created_at) VALUES (?, ?, ?)',
+  ).run(userId, playerId, new Date().toISOString());
+}
+
+export function unsavePlayer(userId: string, playerId: string): void {
+  db.prepare('DELETE FROM saved_players WHERE user_id = ? AND player_id = ?').run(userId, playerId);
 }

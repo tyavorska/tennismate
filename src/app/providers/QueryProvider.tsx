@@ -5,6 +5,8 @@ import { useState, type ReactNode } from 'react';
 import { errorPolicy, toApiError } from '@/shared/api';
 
 const maxAttempts = 3;
+// Lets data handed over from the server render count as fresh instead of refetching at once.
+const staleTimeMs = 30_000;
 
 function shouldRetry(failureCount: number, error: Error): boolean {
   return failureCount < maxAttempts && errorPolicy[toApiError(error).kind].retryable;
@@ -18,7 +20,7 @@ function retryDelay(attempt: number, error: Error): number {
 function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: shouldRetry, retryDelay },
+      queries: { retry: shouldRetry, retryDelay, staleTime: staleTimeMs },
       mutations: { retry: false },
     },
   });

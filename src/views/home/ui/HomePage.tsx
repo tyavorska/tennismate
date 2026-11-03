@@ -64,7 +64,7 @@ const stats = [
 
 export async function HomePage() {
   // Signed-in players start on their dashboard.
-  if ((await getViewer()) !== undefined) redirect('/home');
+  if ((await getViewer()) !== undefined) redirect('/players');
 
   return (
     <main>

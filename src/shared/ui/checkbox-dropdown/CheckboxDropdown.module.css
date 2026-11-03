@@ -1,0 +1,114 @@
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0.5625rem 0.75rem;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-btn);
+  font-weight: 700;
+  line-height: 1.3667;
+  text-align: left;
+  cursor: pointer;
+  background: var(--background);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-full);
+  outline: none;
+}
+
+.button[data-hovered] {
+  border-color: var(--foreground);
+}
+
+.button[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.popover {
+  min-width: var(--trigger-width);
+  max-height: min(24rem, var(--visual-viewport-height));
+  overflow-y: auto;
+  color: var(--foreground);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-md);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  outline: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.375rem var(--space-3);
+  font-size: var(--text-btn);
+  font-weight: 600;
+  line-height: 1.5385;
+  cursor: pointer;
+  border-radius: var(--radius);
+  outline: none;
+}
+
+.row[data-hovered] {
+  background: var(--accent-soft);
+}
+
+.row[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.heading {
+  margin-top: var(--space-1);
+  font-weight: 800;
+}
+
+.item {
+  padding-left: 2.25rem;
+}
+
+.box {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--accent-contrast);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: 0.375rem;
+}
+
+.row[data-selected] .box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.check {
+  width: 0.875rem;
+  height: 0.875rem;
+  visibility: hidden;
+}
+
+.row[data-selected] .check {
+  visibility: visible;
+}

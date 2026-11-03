@@ -10,3 +10,14 @@ export function applyFieldErrors<TValues extends FieldValues>(
     setError(field, { message: fieldErrors[field] }, { shouldFocus: index === 0 }),
   );
 }
+
+/** The server's text for fields that have no place to show their own error, such as selects. */
+export function messagesForFields(
+  fieldErrors: Readonly<Record<string, string>>,
+  fields: readonly string[],
+): string {
+  return fields
+    .map((field) => fieldErrors[field])
+    .filter((message) => message !== undefined)
+    .join(' ');
+}

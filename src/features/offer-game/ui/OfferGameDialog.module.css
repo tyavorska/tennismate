@@ -1,0 +1,46 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-3) 0.875rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.avatar {
+  --avatar-size: 2.75rem;
+}
+
+.previewText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-btn);
+}
+
+.previewText strong {
+  font-size: var(--text-base);
+  font-weight: 800;
+}
+
+.previewText span {
+  color: var(--muted);
+}

@@ -1,0 +1,38 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(5 12 28 / 45%);
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(26.25rem, 100%);
+  color: var(--foreground);
+  background: var(--surface);
+  box-shadow: -1.875rem 0 3.75rem -1.875rem rgb(0 0 0 / 50%);
+}
+
+.panel[data-entering] {
+  animation: slide-in 200ms ease-out;
+}
+
+.panel[data-exiting] {
+  animation: slide-in 150ms ease-in reverse;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  outline: none;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}

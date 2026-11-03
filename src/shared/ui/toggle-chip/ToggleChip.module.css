@@ -1,0 +1,28 @@
+.chip {
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-btn);
+  font-weight: 700;
+  line-height: 1.5385;
+  background: none;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+}
+
+.chip[data-hovered] {
+  background: var(--accent-soft);
+}
+
+.chip[data-selected] {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.chip[data-focus-visible] {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}

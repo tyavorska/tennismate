@@ -60,11 +60,12 @@
 
 /* Pill buttons from the Let. design: lime call to action and a quiet outline. */
 .ball,
+.solid,
 .outline {
   padding: var(--pill-y, 0.75rem) var(--pill-x, 1.125rem);
-  font-size: var(--text-btn);
-  font-weight: 700;
-  line-height: 1.5385;
+  font-size: var(--pill-size, var(--text-btn));
+  font-weight: var(--pill-weight, 700);
+  line-height: var(--pill-lh, 1.5385);
   border-radius: var(--radius-full);
 }
 
@@ -94,6 +95,18 @@
   opacity: 1;
 }
 
+/* Navy pill (periwinkle in dark): the filled action next to the lime one. */
+.solid {
+  color: var(--accent-contrast);
+  border-width: 0;
+  background: var(--accent);
+}
+
+.solid[data-hovered],
+.solid.link:hover {
+  background: var(--accent-hover);
+}
+
 /* Links styled as buttons. */
 .link {
   text-decoration: none;
@@ -109,12 +122,13 @@
 }
 
 .outlineOnDark {
+  background: transparent;
   padding: var(--pill-y, 0.75rem) var(--pill-x, 1.125rem);
   color: var(--cream);
   font-size: var(--text-btn);
-  font-weight: 700;
-  line-height: 1.5385;
-  border-color: var(--cream-soft);
+  font-weight: var(--pill-weight, 700);
+  line-height: var(--pill-lh, 1.5385);
+  border-color: var(--pill-border, var(--cream-soft));
   border-radius: var(--radius-full);
 }
 

@@ -52,7 +52,7 @@ describe('SignInForm', () => {
 
       await fillAndSubmit('ana@example.com', 'serve-and-volley');
 
-      await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/home'));
+      await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/players'));
     });
   });
 

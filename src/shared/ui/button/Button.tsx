@@ -4,7 +4,7 @@ import { Button as AriaButton, type ButtonProps as AriaButtonProps } from 'react
 import styles from './Button.module.css';
 
 type ButtonProps = Omit<AriaButtonProps, 'className'> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'ball' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'ball' | 'outline' | 'solid' | 'outlineOnDark';
   className?: string;
 };
 

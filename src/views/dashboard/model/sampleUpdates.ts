@@ -1,42 +1,51 @@
-/** Sample content for the "Tennis today" feed until the community, ranking and offers exist. */
-export type UpdateCard = {
-  readonly kind: string;
-  readonly title: string;
-  readonly text: string;
+/** Sample content for the home page until the community, ranking and offers exist. */
+export type FreePlayer = {
+  readonly name: string;
+  readonly initials: string;
 };
 
-export type NextGame = {
-  readonly weekday: string;
-  readonly day: string;
-  readonly opponent: string;
-  readonly details: string;
-  readonly status: string;
+export type OpenGameUpdate = {
+  readonly host: string;
+  readonly time: string;
+  readonly court: string;
 };
 
 export type CourtOffer = {
-  readonly initials: string;
   readonly title: string;
-  readonly venue: string;
-  readonly rows: ReadonlyArray<readonly [label: string, value: string]>;
-  readonly spots: string;
+  readonly details: string;
 };
 
 export type Story = {
-  readonly place: string;
-  readonly title: string;
-  readonly people: string;
+  readonly name: string;
 };
 
-export const updateCards = [
-  {
-    kind: 'Open games',
-    title: '1 open game tonight',
-    text: 'Ola · 19:00 at Kazimierz Clay Club. One spot left.',
-  },
+export const freeToday = {
+  count: 6,
+  neighborhood: 'Kazimierz',
+  players: [
+    { name: 'Marta', initials: 'MK' },
+    { name: 'Piotr', initials: 'PW' },
+    { name: 'Ola', initials: 'ON' },
+    { name: 'Kuba', initials: 'KS' },
+  ],
+} as const satisfies { count: number; neighborhood: string; players: readonly FreePlayer[] };
+
+export const openGamesTonight = {
+  count: 2,
+  host: 'Piotr W.',
+  time: '19:00',
+  court: 'Kazimierz Clay Club',
+  hosts: [
+    { name: 'Piotr', initials: 'PW' },
+    { name: 'Ola', initials: 'ON' },
+  ],
+} as const;
+
+export const infoCards = [
   {
     kind: 'Tournament',
-    title: 'Beginner rally day',
-    text: 'Sat 7 Nov · Ruczaj Campus Courts. 7 of 16 spots left.',
+    title: 'Kraków Autumn Open',
+    text: '15 Nov · Cracovia Tennis Club. 6 of 32 spots left.',
   },
   {
     kind: 'Courts',
@@ -45,64 +54,26 @@ export const updateCards = [
   },
   {
     kind: 'Ranking',
-    title: "You're #11 in the ranking",
-    text: '1245 points · 1–1. 1 more confirmed result to verify your level.',
+    title: "You're #12 in Kraków",
+    text: '420 points · 8–5. 2 more confirmed results to verify your level.',
   },
   {
     kind: 'Community',
-    title: 'Dmytro: “Need a 4th for doubles this Sunday 18:00 at Podgórze Indoor…”',
-    text: 'Looking for players · 12 likes · 4 replies',
+    title: 'Ola N.: “Anyone for doubles on Saturday morning?”',
+    text: 'Doubles · 14 likes · 6 replies',
+    faces: [{ name: 'Ola', initials: 'ON' }],
   },
-] as const satisfies readonly UpdateCard[];
-
-export const nextGames = [
-  {
-    weekday: 'Sat',
-    day: '31',
-    opponent: 'vs Oksana',
-    details: 'Oct · 10:00 · Błonia Park Tennis',
-    status: '✓ Confirmed',
-  },
-  {
-    weekday: 'Thu',
-    day: '5',
-    opponent: 'vs Bartek + 2',
-    details: 'Nov · 19:00 · Podgórze Indoor Arena',
-    status: 'Waiting',
-  },
-] as const satisfies readonly NextGame[];
+] as const;
 
 export const courtOffers = [
-  {
-    initials: 'RC',
-    title: 'Cardio tennis after work',
-    venue: 'Ruczaj Campus Courts',
-    rows: [
-      ['When', 'Tomorrow · 19:00'],
-      ['Type', 'Cardio tennis · Kasia'],
-      ['Level', 'All levels'],
-      ['Price', '55 zł'],
-    ],
-    spots: '4 spots left',
-  },
-  {
-    initials: 'PI',
-    title: 'Doubles match play night',
-    venue: 'Podgórze Indoor Arena',
-    rows: [
-      ['When', 'Sun 1 Nov · 20:00'],
-      ['Type', 'Match play night'],
-      ['Level', '3.5–4.5'],
-      ['Price', '45 zł'],
-    ],
-    spots: '5 spots left',
-  },
+  { title: 'Winter clay pass', details: 'Kazimierz Clay Club · from 60 zł/h' },
+  { title: 'Morning hitting hour', details: 'Cracovia Tennis Club · 2 spots' },
+  { title: 'Doubles evening', details: 'Park Jordana · Fri 18:00' },
 ] as const satisfies readonly CourtOffer[];
 
 export const stories = [
-  { place: 'Ruczaj · 6-4', title: 'First set won', people: 'Natalia · Kuba' },
-  { place: 'Kazimierz Clay Club', title: 'Clay all winter', people: 'Marta · Dmytro' },
+  { name: 'Marta K.' },
+  { name: 'Piotr W.' },
+  { name: 'Ola N.' },
+  { name: 'Kuba S.' },
 ] as const satisfies readonly Story[];
-
-/** Figures shown next to the city until courts and districts have their own data. */
-export const courtCount = 38;

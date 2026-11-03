@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { playerSchema } from '@/entities/player';
@@ -6,20 +6,13 @@ import { renderWithQuery } from '@/shared/testing';
 import { AppShell } from '../index';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/home' }));
+vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/players' }));
 
 const viewer = playerSchema.parse({
   id: '2f1c6c8e-9a43-4b8b-9a55-0f6a7b3a1d10',
   name: 'Tania Ivanova',
   rating: 2,
-  about: '',
-  neighborhood: 'Center City',
-  location: { latitude: 39.9526, longitude: -75.1652 },
-  lastActiveDaysAgo: 0,
-  gamesPlayed: 0,
-  readyToPlay: false,
-  playTimes: [],
-  homeCourts: [],
+  neighborhood: 'Stare Miasto',
 });
 
 function renderShell(): void {
@@ -49,8 +42,79 @@ describe('AppShell', () => {
       renderShell();
 
       const nav = screen.getByRole('navigation', { name: 'Main' });
-      expect(nav).toContainElement(screen.getByRole('link', { name: 'Home' }));
-      expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+      expect(nav).toContainElement(screen.getByRole('link', { name: 'Players' }));
+      expect(screen.getByRole('link', { name: 'Players' })).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByRole('link', { name: 'Players' })).toHaveAttribute('href', '/players');
+    });
+
+    it('links to the calendar page without marking it as current', () => {
+      renderShell();
+
+      const link = screen.getByRole('link', { name: 'My calendar' });
+      expect(link).toHaveAttribute('href', '/calendar');
+      expect(link).not.toHaveAttribute('aria-current');
+    });
+
+    it('links the free-to-play shortcut to the offer form on the players page', () => {
+      renderShell();
+
+      expect(screen.getByRole('link', { name: "I'm free to play" })).toHaveAttribute(
+        'href',
+        '/players?offer=1',
+      );
+    });
+  });
+
+  describe('inbox', () => {
+    it('shows the number of unread conversations on the Messages button', () => {
+      renderShell();
+
+      expect(screen.getByRole('button', { name: 'Messages, 1 unread' })).toBeInTheDocument();
+    });
+
+    it('opens the conversation list in a drawer', async () => {
+      renderShell();
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole('button', { name: /Messages/ }));
+
+      const drawer = screen.getByRole('dialog', { name: 'Messages' });
+      expect(within(drawer).getAllByRole('listitem')).toHaveLength(6);
+    });
+
+    it('marks a conversation as read when it is opened', async () => {
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /Messages/ }));
+
+      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+      await user.click(screen.getByRole('button', { name: 'Back to messages' }));
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
+    });
+
+    it('sends a reply into the open conversation', async () => {
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /Messages/ }));
+      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+
+      await user.type(screen.getByRole('textbox', { name: 'Message' }), 'See you at 10');
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+
+      expect(screen.getByText('See you at 10')).toBeInTheDocument();
+    });
+
+    it('sends a quick reply', async () => {
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: /Messages/ }));
+      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+
+      await user.click(screen.getByRole('button', { name: 'Sounds good' }));
+
+      expect(screen.getByText('Sounds good', { selector: 'p' })).toBeInTheDocument();
     });
   });
 
@@ -68,6 +132,16 @@ describe('AppShell', () => {
 
       expect(screen.getByRole('menu', { name: 'Tania' })).toBeInTheDocument();
       expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
+    });
+
+    it('links to the profile settings page from the menu', async () => {
+      renderShell();
+      await openAccountMenu();
+
+      expect(screen.getByRole('menuitem', { name: 'Profile settings' })).toHaveAttribute(
+        'href',
+        '/profile',
+      );
     });
 
     it('signs out and goes to the landing page', async () => {

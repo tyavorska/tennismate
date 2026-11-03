@@ -1,8 +1,5 @@
-import type { Metadata } from 'next';
-import { DashboardPage } from '@/views/dashboard';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Home | Let.' };
-
-export default function Page() {
-  return <DashboardPage />;
+export default function Page(): never {
+  redirect('/players');
 }

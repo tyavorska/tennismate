@@ -46,13 +46,14 @@ type GameRow = z.infer<typeof gameRowSchema>;
 
 const selectGames = `
   SELECT games.id, games.host_id, profiles.name AS host_name, courts.name AS court,
-         courts.district, games.starts_at, games.format, games.rating, games.spots,
+         districts.name AS district, games.starts_at, games.format, games.rating, games.spots,
          (SELECT COUNT(*) FROM game_participants WHERE game_id = games.id) AS taken,
          EXISTS (SELECT 1 FROM game_participants
                  WHERE game_id = games.id AND user_id = ?) AS joined
   FROM games
   JOIN profiles ON profiles.user_id = games.host_id
-  JOIN courts ON courts.id = games.court_id`;
+  JOIN courts ON courts.id = games.court_id
+  JOIN districts ON districts.id = courts.district_id`;
 
 function toOpenGame(row: GameRow, viewerId: string, today: IsoDate): OpenGame | undefined {
   const { date, time } = toKrakowWallClock(new Date(row.starts_at));
@@ -76,20 +77,28 @@ function toOpenGame(row: GameRow, viewerId: string, today: IsoDate): OpenGame | 
   });
 }
 
-function findGameRow(viewerId: string, gameId: string): GameRow | undefined {
-  const row = db.prepare(`${selectGames} WHERE games.id = ?`).get(viewerId, gameId);
+// A game in another city looks the same as one that does not exist.
+function findGameRow(viewerId: string, cityId: number, gameId: string): GameRow | undefined {
+  const row = db
+    .prepare(`${selectGames} WHERE games.id = ? AND courts.city_id = ?`)
+    .get(viewerId, gameId, cityId);
   return row && gameRowSchema.parse(row);
 }
 
-function requireGame(viewerId: string, gameId: string): GameRow {
-  const row = findGameRow(viewerId, gameId);
+function requireGame(viewerId: string, cityId: number, gameId: string): GameRow {
+  const row = findGameRow(viewerId, cityId, gameId);
   if (row === undefined)
     throw new DomainError('notFound', { message: 'This game no longer exists.' });
   return row;
 }
 
-function requireOpenGame(viewerId: string, gameId: string, today: IsoDate): OpenGame {
-  const game = toOpenGame(requireGame(viewerId, gameId), viewerId, today);
+function requireOpenGame(
+  viewerId: string,
+  cityId: number,
+  gameId: string,
+  today: IsoDate,
+): OpenGame {
+  const game = toOpenGame(requireGame(viewerId, cityId, gameId), viewerId, today);
   if (game === undefined)
     throw new DomainError('notFound', { message: 'This game is no longer listed.' });
   return game;
@@ -97,14 +106,15 @@ function requireOpenGame(viewerId: string, gameId: string, today: IsoDate): Open
 
 /** Games from now until the end of the week the finder covers, soonest first. */
 export function listOpenGames(user: User, now: Date = new Date()): readonly OpenGame[] {
-  ensureProfile(user);
+  const { city } = ensureProfile(user);
   const today = todayInKrakow(now);
   const until = krakowToUtc(addDays(today, finderDays + 1), '00:00').toISOString();
   const rows = db
     .prepare(
-      `${selectGames} WHERE games.starts_at >= ? AND games.starts_at < ? ORDER BY games.starts_at`,
+      `${selectGames} WHERE courts.city_id = ? AND games.starts_at >= ? AND games.starts_at < ?
+       ORDER BY games.starts_at`,
     )
-    .all(user.id, now.toISOString(), until);
+    .all(user.id, city.id, now.toISOString(), until);
 
   return z
     .array(gameRowSchema)
@@ -113,8 +123,10 @@ export function listOpenGames(user: User, now: Date = new Date()): readonly Open
 }
 
 export function createGame(user: User, input: NewGame, now: Date = new Date()): OpenGame {
-  ensureProfile(user);
-  const court = db.prepare('SELECT id FROM courts WHERE name = ?').get(input.court);
+  const { city } = ensureProfile(user);
+  const court = db
+    .prepare('SELECT id FROM courts WHERE city_id = ? AND name = ?')
+    .get(city.id, input.court);
   if (court === undefined) {
     throw new DomainError('validation', {
       fieldErrors: { court: 'Choose a court from the list.' },
@@ -145,11 +157,12 @@ export function createGame(user: User, input: NewGame, now: Date = new Date()): 
     input.note.trim(),
     now.toISOString(),
   );
-  return requireOpenGame(user.id, id, today);
+  return requireOpenGame(user.id, city.id, id, today);
 }
 
 export function deleteGame(user: User, gameId: string): void {
-  const game = requireGame(user.id, gameId);
+  const { city } = ensureProfile(user);
+  const game = requireGame(user.id, city.id, gameId);
   if (game.host_id !== user.id) {
     throw new DomainError('forbidden', { message: 'Only the host can remove this game.' });
   }
@@ -158,11 +171,11 @@ export function deleteGame(user: User, gameId: string): void {
 
 /** Taking a spot is one statement, so two players cannot both get the last one. */
 export function joinGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
-  ensureProfile(user);
+  const { city } = ensureProfile(user);
   const today = todayInKrakow(now);
 
   transaction(db, () => {
-    const game = requireGame(user.id, gameId);
+    const game = requireGame(user.id, city.id, gameId);
     if (game.host_id === user.id) {
       throw new DomainError('conflict', { message: 'You are hosting this game.' });
     }
@@ -182,16 +195,17 @@ export function joinGame(user: User, gameId: string, now: Date = new Date()): Op
     if (changes === 0) throw new DomainError('conflict', { message: 'This game is full.' });
   });
 
-  return requireOpenGame(user.id, gameId, today);
+  return requireOpenGame(user.id, city.id, gameId, today);
 }
 
 export function leaveGame(user: User, gameId: string, now: Date = new Date()): OpenGame {
-  requireGame(user.id, gameId);
+  const { city } = ensureProfile(user);
+  requireGame(user.id, city.id, gameId);
   db.prepare('DELETE FROM game_participants WHERE game_id = ? AND user_id = ?').run(
     gameId,
     user.id,
   );
-  return requireOpenGame(user.id, gameId, todayInKrakow(now));
+  return requireOpenGame(user.id, city.id, gameId, todayInKrakow(now));
 }
 
 const maxCalendarDays = 62;
@@ -234,7 +248,7 @@ export function listCalendarEvents(
   from: IsoDate,
   to: IsoDate,
 ): readonly CalendarEvent[] {
-  ensureProfile(user);
+  const { city } = ensureProfile(user);
   const spanDays = (Date.parse(to) - Date.parse(from)) / 86_400_000;
   if (spanDays < 0 || spanDays > maxCalendarDays) {
     throw new DomainError('validation', {
@@ -244,10 +258,12 @@ export function listCalendarEvents(
 
   const gameRows = db
     .prepare(
-      `${selectGames} WHERE games.starts_at >= ? AND games.starts_at < ? ORDER BY games.starts_at`,
+      `${selectGames} WHERE courts.city_id = ? AND games.starts_at >= ? AND games.starts_at < ?
+       ORDER BY games.starts_at`,
     )
     .all(
       user.id,
+      city.id,
       krakowToUtc(from, '00:00').toISOString(),
       krakowToUtc(addDays(to, 1), '00:00').toISOString(),
     );
@@ -255,9 +271,9 @@ export function listCalendarEvents(
     .prepare(
       `SELECT tournaments.id, tournaments.name, tournaments.date, courts.name AS venue
        FROM tournaments JOIN courts ON courts.id = tournaments.court_id
-       WHERE tournaments.date >= ? AND tournaments.date <= ?`,
+       WHERE courts.city_id = ? AND tournaments.date >= ? AND tournaments.date <= ?`,
     )
-    .all(from, to);
+    .all(city.id, from, to);
 
   const games = z
     .array(gameRowSchema)

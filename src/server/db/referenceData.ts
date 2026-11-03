@@ -1,4 +1,19 @@
-export const districts = [
+type District = Readonly<{ name: string; latitude: number; longitude: number }>;
+type Court = Readonly<{ name: string; district: string }>;
+
+export type CityData = Readonly<{
+  slug: string;
+  name: string;
+  country: string;
+  timezone: string;
+  /** The middle of the city. New players start in the district closest to it. */
+  latitude: number;
+  longitude: number;
+  districts: readonly District[];
+  courts: readonly Court[];
+}>;
+
+const krakowDistricts = [
   { name: 'Bronowice', latitude: 50.0802, longitude: 19.8905 },
   { name: 'Czyżyny', latitude: 50.0731, longitude: 20.0006 },
   { name: 'Dębniki', latitude: 50.0408, longitude: 19.9145 },
@@ -13,7 +28,7 @@ export const districts = [
   { name: 'Zabłocie', latitude: 50.0493, longitude: 19.9592 },
 ] as const;
 
-export const courts = [
+const krakowCourts = [
   { name: 'Kazimierz Clay Club', district: 'Kazimierz' },
   { name: 'Cracovia Tennis Club', district: 'Stare Miasto' },
   { name: 'Błonia Park Tennis', district: 'Stare Miasto' },
@@ -28,3 +43,17 @@ export const courts = [
   { name: 'Dębniki Riverside Courts', district: 'Dębniki' },
   { name: 'Wola Justowska Tennis Park', district: 'Wola Justowska' },
 ] as const;
+
+/** The cities the app is open in. A city only goes in once its districts and courts are listed. */
+export const cityData: readonly CityData[] = [
+  {
+    slug: 'krakow',
+    name: 'Kraków',
+    country: 'PL',
+    timezone: 'Europe/Warsaw',
+    latitude: 50.0647,
+    longitude: 19.945,
+    districts: krakowDistricts,
+    courts: krakowCourts,
+  },
+];

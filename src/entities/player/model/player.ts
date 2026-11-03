@@ -19,6 +19,8 @@ export const playerSchema = z.object({
   name: z.string().min(1),
   rating: ntrpRatingSchema,
   neighborhood: z.string().min(1),
+  /** The city the player plays in. Everything the player sees is limited to it. */
+  city: z.object({ id: z.number().int().positive(), name: z.string().min(1) }),
 });
 export type Player = Readonly<z.infer<typeof playerSchema>>;
 

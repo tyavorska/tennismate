@@ -40,12 +40,12 @@ describe('saved players', () => {
     const viewer = await signUp('saver@example.com', 'Stare Miasto');
     const other = await signUp('saved@example.com', 'Kazimierz');
 
-    savePlayer(viewer.id, other.id);
-    savePlayer(viewer.id, other.id);
-    expect(listSavedPlayerIds(viewer.id)).toEqual([other.id]);
+    savePlayer(viewer, other.id);
+    savePlayer(viewer, other.id);
+    expect(listSavedPlayerIds(viewer)).toEqual([other.id]);
 
-    unsavePlayer(viewer.id, other.id);
-    expect(listSavedPlayerIds(viewer.id)).toEqual([]);
+    unsavePlayer(viewer, other.id);
+    expect(listSavedPlayerIds(viewer)).toEqual([]);
   });
 
   it('keeps each user list apart', async () => {
@@ -53,17 +53,15 @@ describe('saved players', () => {
     const second = await signUp('second@example.com', 'Stare Miasto');
     const other = await signUp('target@example.com', 'Kazimierz');
 
-    savePlayer(first.id, other.id);
+    savePlayer(first, other.id);
 
-    expect(listSavedPlayerIds(second.id)).toEqual([]);
+    expect(listSavedPlayerIds(second)).toEqual([]);
   });
 
   it('refuses to save someone who does not exist or yourself', async () => {
     const viewer = await signUp('lonely@example.com', 'Stare Miasto');
 
-    expect(() => savePlayer(viewer.id, '00000000-0000-4000-8000-00000000ffff')).toThrow(
-      DomainError,
-    );
-    expect(() => savePlayer(viewer.id, viewer.id)).toThrow(DomainError);
+    expect(() => savePlayer(viewer, '00000000-0000-4000-8000-00000000ffff')).toThrow(DomainError);
+    expect(() => savePlayer(viewer, viewer.id)).toThrow(DomainError);
   });
 });

@@ -2,10 +2,11 @@ import 'server-only';
 import { z } from 'zod';
 import { playerSchema, type Player, type ProfileUpdate } from '@/entities/player';
 import type { User } from '@/entities/user';
+import { distanceKm } from '@/shared/lib';
+import { defaultCityId } from '../cities';
 import { db } from '../db';
 import { DomainError } from '../http';
 
-const defaultDistrict = 'Stare Miasto';
 const defaultRating = 3;
 
 const profileRowSchema = z.object({
@@ -13,7 +14,11 @@ const profileRowSchema = z.object({
   name: z.string(),
   rating: z.number(),
   district: z.string(),
+  city_id: z.number(),
+  city_name: z.string(),
 });
+
+const districtRowSchema = z.object({ id: z.number(), latitude: z.number(), longitude: z.number() });
 
 /** "ana.smith@example.com" becomes "Ana Smith". */
 function nameFromEmail(email: string): string {
@@ -31,47 +36,89 @@ function toPlayer(row: z.infer<typeof profileRowSchema>): Player {
     name: row.name,
     rating: row.rating,
     neighborhood: row.district,
+    city: { id: row.city_id, name: row.city_name },
   });
 }
 
 function findProfile(userId: string): Player | undefined {
   const row = db
-    .prepare('SELECT user_id AS id, name, rating, district FROM profiles WHERE user_id = ?')
+    .prepare(
+      `SELECT profiles.user_id AS id, profiles.name, profiles.rating, districts.name AS district,
+              cities.id AS city_id, cities.name AS city_name
+       FROM profiles
+       JOIN districts ON districts.id = profiles.district_id
+       JOIN cities ON cities.id = profiles.city_id
+       WHERE profiles.user_id = ?`,
+    )
     .get(userId);
   return row && toPlayer(profileRowSchema.parse(row));
 }
 
-/** The user's profile. Accounts made before profiles existed get a starter one on first use. */
-export function ensureProfile(user: User): Player {
+/** The district closest to the middle of the city, where a new player starts until they pick one. */
+function centralDistrictId(cityId: number): number {
+  const city = z
+    .object({ latitude: z.number(), longitude: z.number() })
+    .parse(db.prepare('SELECT latitude, longitude FROM cities WHERE id = ?').get(cityId));
+  const districts = z
+    .array(districtRowSchema)
+    .parse(
+      db.prepare('SELECT id, latitude, longitude FROM districts WHERE city_id = ?').all(cityId),
+    );
+
+  const [closest] = districts.toSorted((a, b) => distanceKm(city, a) - distanceKm(city, b));
+  if (closest === undefined) throw new Error(`City ${cityId} has no districts`);
+  return closest.id;
+}
+
+/**
+ * The user's profile. Accounts made before profiles existed get a starter one on first use, in
+ * the given city or else the default one.
+ */
+export function ensureProfile(user: User, cityId: number = defaultCityId()): Player {
   const existing = findProfile(user.id);
   if (existing !== undefined) return existing;
 
   const now = new Date().toISOString();
   db.prepare(
     `INSERT OR IGNORE INTO profiles
-       (user_id, name, district, rating, formats, times, created_at, updated_at)
-     VALUES (?, ?, ?, ?, '["singles","doubles"]', '[]', ?, ?)`,
-  ).run(user.id, nameFromEmail(user.email), defaultDistrict, defaultRating, now, now);
+       (user_id, name, city_id, district_id, rating, formats, times, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, '["singles","doubles"]', '[]', ?, ?)`,
+  ).run(
+    user.id,
+    nameFromEmail(user.email),
+    cityId,
+    centralDistrictId(cityId),
+    defaultRating,
+    now,
+    now,
+  );
 
   const created = findProfile(user.id);
   if (created === undefined) throw new Error('Profile was not created');
   return created;
 }
 
+/** Changes the name, district and level. The district has to be in the player's own city. */
 export function updateProfile(user: User, update: ProfileUpdate): Player {
+  const profile = ensureProfile(user);
   const district = db
-    .prepare('SELECT 1 AS found FROM districts WHERE name = ?')
-    .get(update.neighborhood);
+    .prepare('SELECT id FROM districts WHERE city_id = ? AND name = ?')
+    .get(profile.city.id, update.neighborhood);
   if (district === undefined) {
     throw new DomainError('validation', {
       fieldErrors: { neighborhood: 'Choose a district from the list.' },
     });
   }
 
-  ensureProfile(user);
   db.prepare(
-    'UPDATE profiles SET name = ?, district = ?, rating = ?, updated_at = ? WHERE user_id = ?',
-  ).run(update.name, update.neighborhood, update.rating, new Date().toISOString(), user.id);
+    'UPDATE profiles SET name = ?, district_id = ?, rating = ?, updated_at = ? WHERE user_id = ?',
+  ).run(
+    update.name,
+    z.number().parse(district.id),
+    update.rating,
+    new Date().toISOString(),
+    user.id,
+  );
 
   const updated = findProfile(user.id);
   if (updated === undefined) throw new Error('Profile disappeared during update');

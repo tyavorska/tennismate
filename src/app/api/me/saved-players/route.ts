@@ -4,6 +4,6 @@ import { listSavedPlayerIds } from '@/server/players';
 
 export function GET(): Promise<NextResponse> {
   return handleAuthed('saved-players.list', (user) =>
-    NextResponse.json<readonly string[]>(listSavedPlayerIds(user.id)),
+    NextResponse.json<readonly string[]>(listSavedPlayerIds(user)),
   );
 }

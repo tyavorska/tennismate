@@ -142,12 +142,21 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
 
 ### Database
 
-- The schema lives in `server/db/db.ts` as `CREATE TABLE IF NOT EXISTS`. **Only add tables.** Never
-  `ALTER` or drop an existing one, because a database file from earlier work already exists and
-  `IF NOT EXISTS` will not change it. Foreign keys are on, with `ON DELETE CASCADE` for data that
-  belongs to a user.
-- `initialize` runs on every module load, so everything in it is safe to repeat.
-- Reference data (districts, courts) is seeded in every environment with `INSERT OR IGNORE`.
+- **The schema changes only through migrations** in `server/db/migrations/`, numbered `001_…`,
+  `002_…` and listed in `migrations/index.ts`. `migrate` runs on every start, applies what is
+  missing in order, and stores the version in `PRAGMA user_version`.
+- **Never edit a migration that has been merged.** Add the next one. `001_baseline` is the schema
+  from before migrations existed. Do not add to it.
+- Each migration runs in its own transaction with foreign keys off, then `foreign_key_check` must
+  be empty, or the whole migration is undone. To change a table, rebuild it: create the new table,
+  copy the rows, drop the old one, rename. Keep ids when other tables point at them.
+- Test every migration with `migrate.test.ts`: from an empty database, and from the previous schema
+  with rows in it. Check that rows and links survive. Before running one on a real database, copy
+  the file.
+- Foreign keys are on, with `ON DELETE CASCADE` for data that belongs to a user. `initialize` runs
+  on every module load, so everything in it is safe to repeat.
+- Reference data (cities, districts, courts) lives in `server/db/referenceData.ts` and is seeded in
+  every environment with `INSERT OR IGNORE`.
 - **Demo data is development-only** (`NODE_ENV === 'development'`), idempotent and non-destructive:
   demo games are replaced only once all of them have passed, so a restart never undoes a join.
   Demo players are real `users` rows with the password hash `!`, which no password matches.
@@ -160,12 +169,49 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
   `created_at`. `online` is `false` until presence exists.
 - Accounts made before profiles existed get a profile on first use (`ensureProfile`).
 
+### Cities
+
+The app is open in several cities. A player only ever sees, and can only act on, their own city.
+
+- **A city is curated.** It goes into `referenceData.ts` only once its districts and courts are
+  listed. Sign-up shows this list (`GET /api/cities`, open to everyone). There is no free-text city.
+  Players in a missing city can ask for it (`city_requests`, not built yet).
+- Every district, court and profile has a `city_id`. Names are unique only inside a city. A profile's
+  district must belong to its city, and the database enforces it with a composite foreign key.
+- **Isolation is enforced on the server**, in SQL, not in the UI. Every query for players, games,
+  courts, districts, saved players, calendar events and tournaments filters by the viewer's
+  `city_id` (`ensureProfile(user).city.id`). A row from another city answers `notFound`, the same
+  as a row that does not exist, so nothing leaks.
+- Add a cross-city test whenever a query or handler touches players, games or courts
+  (`server/cities/cities.test.ts`, with `addCity` from `server/testing/cities.ts`).
+- The city shown in the UI comes from the profile (`viewer.city`). Do not hard-code a city name.
+- New accounts start in the first city, in the district nearest its centre, until sign-up asks for
+  one. Pass a `cityId` to `ensureProfile` for that.
+
+**Planned, not built yet:**
+
+- City field in the sign-up form, and one `/choose-city` page for accounts with no city (social
+  sign-in). Sign-in itself never asks for a city.
+- **Changing city** (profile settings) needs a confirm step that shows the impact first
+  (`GET /api/me/city/impact`). `PUT /api/me/city` with `confirm: true` then, in one transaction,
+  changes the city, **cancels** the games the player hosts, removes them from the games they joined,
+  and writes `notifications` rows for everyone affected. The server answers `409 conflict` with the
+  same summary when there are affected games and `confirm` is missing. Games are cancelled
+  (`cancelled_at`), never deleted. Notifications are written in the same transaction and delivered
+  to the messenger afterwards (outbox), so none are lost.
+- Saved players in another city stay saved but are hidden.
+- Open question: a limit on how often the city can change.
+- Remove the hard-coded "Kraków" from the UI: the Players page heading, "All of Kraków" and the
+  "New in Kraków" list in the filters, the level quiz text, and the calendar lead.
+- `cities.timezone` is stored, but the time helpers in `@/shared/lib` still use `Europe/Warsaw`.
+  Make them take the city's zone before adding a city in another timezone.
+
 ### Time
 
 - Store instants as UTC ISO strings (`starts_at`). Store plain dates as `YYYY-MM-DD`.
 - Convert with `krakowToUtc`, `toKrakowWallClock`, `todayInKrakow` and `nextWeekday` from
   `@/shared/lib`. They use `Europe/Warsaw` and follow daylight saving. Never use the server's local
-  time.
+  time. The zone is fixed for now (see Cities).
 - The finder's `Today / Tomorrow / Sat / Sun` is a display of a real date, not data. Only games in
   the next 7 days with one of those names appear in the finder. The calendar shows every date.
 

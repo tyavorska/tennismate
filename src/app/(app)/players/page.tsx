@@ -15,6 +15,8 @@ export default async function Page() {
   const user = await getCurrentUser();
   if (user === undefined) redirect('/sign-in');
 
+  const viewer = ensureProfile(user);
+
   // Games and saved players change on the client, so they go through the query cache.
   const queryClient = new QueryClient();
   await Promise.all([
@@ -24,7 +26,7 @@ export default async function Page() {
     }),
     queryClient.prefetchQuery({
       queryKey: playerQueries.saved().queryKey,
-      queryFn: () => listSavedPlayerIds(user.id),
+      queryFn: () => listSavedPlayerIds(user),
     }),
   ]);
 
@@ -32,8 +34,8 @@ export default async function Page() {
     <HydrationBoundary state={dehydrate(queryClient)}>
       <PlayersPage
         players={listPlayers(user)}
-        courts={listCourts()}
-        viewerRating={ensureProfile(user).rating}
+        courts={listCourts(viewer.city.id)}
+        viewerRating={viewer.rating}
       />
     </HydrationBoundary>
   );

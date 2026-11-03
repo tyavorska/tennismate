@@ -11,5 +11,7 @@ export default async function Page() {
   const [viewer, user] = await Promise.all([getViewer(), getCurrentUser()]);
   if (viewer === undefined || user === undefined) redirect('/sign-in');
 
-  return <ProfilePage viewer={viewer} email={user.email} districts={listDistricts()} />;
+  return (
+    <ProfilePage viewer={viewer} email={user.email} districts={listDistricts(viewer.city.id)} />
+  );
 }

@@ -16,6 +16,7 @@ describe('ensureProfile', () => {
       name: 'Ana Smith',
       rating: 3,
       neighborhood: 'Stare Miasto',
+      city: { id: expect.any(Number), name: 'Kraków' },
     });
   });
 
@@ -36,6 +37,7 @@ describe('updateProfile', () => {
       name: 'Cleo C.',
       rating: 4,
       neighborhood: 'Podgórze',
+      city: { id: expect.any(Number), name: 'Kraków' },
     });
   });
 

@@ -1,6 +1,7 @@
 /* Measurements follow the Let. landing frame (1440 wide, 70 side padding). */
 .hero {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2.5rem;
   align-items: center;
   padding: 1.25rem var(--space-4) 1.5rem;
@@ -49,13 +50,6 @@
   color: var(--foreground);
   background: var(--surface);
   border-radius: 1.25rem;
-}
-
-.heroImage {
-  width: 100%;
-  max-width: 35rem;
-  height: auto;
-  border-radius: 2rem;
 }
 
 .features,

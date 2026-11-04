@@ -1,9 +1,9 @@
-import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { ButtonLink, Card, Eyebrow, LogoLink } from '@/shared/ui';
 import { getCurrentUser } from '@/server/auth';
 import { listCities } from '@/server/cities';
 import { HeroAuthCard } from './HeroAuthCard';
+import { HeroStage } from './HeroStage';
 import { HomeIcon, type HomeIconName } from './HomeIcons';
 import styles from './HomePage.module.css';
 
@@ -85,14 +85,7 @@ export async function HomePage() {
             <HeroAuthCard cities={listCities()} />
           </div>
         </div>
-        <Image
-          className={styles.heroImage}
-          src="/images/hero.png"
-          alt="The Let. app on a phone, showing players who are free tonight"
-          width={560}
-          height={558}
-          priority
-        />
+        <HeroStage />
       </section>
 
       <section className={styles.features} aria-labelledby="features-heading">

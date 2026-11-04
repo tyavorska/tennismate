@@ -1,0 +1,319 @@
+/* Sized in em so the whole stage scales from one font-size; the phone keeps its colors in both themes. */
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 35rem;
+  min-height: 36.25em;
+  margin-inline: auto;
+  font-size: clamp(0.75rem, 3.4vw, 1rem);
+}
+
+.phone {
+  position: relative;
+  width: 16.875em;
+  height: 35em;
+  background: var(--navy-deep);
+  border-radius: 2.75em;
+  box-shadow:
+    0 3.125em 5.625em -1.875em rgb(0 0 0 / 75%),
+    inset 0 0 0 0.125em var(--night-line);
+  transform: rotate(-4deg);
+}
+
+.notch {
+  position: absolute;
+  z-index: 3;
+  top: 1.25em;
+  left: 50%;
+  width: 5.5em;
+  height: 1.5em;
+  background: var(--navy-deep);
+  border-radius: 0.875em;
+  transform: translateX(-50%);
+}
+
+.screen {
+  position: absolute;
+  inset: 0.6875em;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--navy);
+  background: var(--cream);
+  border-radius: 2.125em;
+}
+
+.top {
+  padding: 2.875em 0.875em 0.75em;
+  color: var(--cream);
+  background: var(--navy);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.1em;
+  font-family: var(--font-display);
+  font-size: 1.875em;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wordmarkBall {
+  display: block;
+  width: 0.3em;
+  height: 0.3em;
+  margin-bottom: 0.08em;
+}
+
+.wordmarkBall svg,
+.ball svg {
+  width: 100%;
+  height: 100%;
+}
+
+.screenTitle {
+  padding: 0.75em 0.875em 0.375em;
+  font-family: var(--font-display);
+  font-size: 1.375em;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5em;
+  padding: 0 0.875em;
+}
+
+.card {
+  overflow: hidden;
+  color: var(--cream-card);
+  font-size: 0.625em;
+  background: var(--navy);
+  border-radius: 1.4em;
+}
+
+.pic {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.court {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.courtSky {
+  fill: var(--navy-3);
+}
+
+.courtFloor {
+  fill: var(--peri);
+}
+
+.courtLines {
+  fill: none;
+  stroke: var(--cream);
+  stroke-opacity: 0.75;
+  stroke-width: 2.2;
+}
+
+.courtNet {
+  fill: var(--cream-card);
+}
+
+.pic .cardAvatar {
+  --avatar-size: 4.2em;
+
+  position: relative;
+  margin-bottom: 0.6em;
+  color: var(--navy);
+  font-size: 1.6em;
+  background: var(--peri-soft);
+}
+
+.rating {
+  position: absolute;
+  top: 0.5em;
+  left: 0.5em;
+  padding: 0.1em 0.5em;
+  color: var(--navy);
+  font-size: 0.8em;
+  font-weight: 800;
+  background: var(--cream-card);
+  border-radius: var(--radius-full);
+}
+
+.cardName {
+  display: block;
+  padding: 0.3em 0.7em 0;
+  font-family: var(--font-display);
+  font-size: 1.6em;
+  text-transform: uppercase;
+}
+
+.cardMeta {
+  display: block;
+  padding: 0 0.7em;
+  color: var(--peri-soft);
+  font-size: 0.85em;
+}
+
+.cardAction {
+  display: block;
+  margin: 0.5em 0.7em 0.7em;
+  padding: 0.3em;
+  color: var(--navy);
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+  background: var(--ball);
+  border-radius: var(--radius-full);
+}
+
+.invite {
+  margin: 0.625em 0.875em 0;
+  overflow: hidden;
+  font-size: 0.625em;
+  background: var(--cream-card);
+  border: var(--border-width) solid var(--border);
+  border-radius: 1.2em;
+}
+
+.inviteTag {
+  padding: 0.6em 1.1em;
+  color: var(--cream);
+  font-size: 0.8em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--navy);
+}
+
+.inviteWhen {
+  display: block;
+  padding: 0.3em 0.9em 0;
+  font-family: var(--font-display);
+  font-size: 1.8em;
+  text-transform: uppercase;
+}
+
+.invitePlace {
+  display: block;
+  padding: 0 0.9em 0.6em;
+  color: var(--ink-soft);
+}
+
+.inviteOk {
+  padding: 0.4em 0.9em;
+  color: var(--ok);
+  font-weight: 800;
+  border-top: var(--border-width) solid var(--border);
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  margin-top: auto;
+  padding: 0.625em 0 1.125em;
+  background: var(--cream-card);
+  border-top: var(--border-width) solid var(--border);
+}
+
+.tab,
+.tabActive {
+  width: 1.25em;
+  height: 1.25em;
+  fill: none;
+  stroke: var(--cream-soft);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tabActive {
+  stroke: var(--navy);
+}
+
+.float {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5625em;
+  max-width: 13.75em;
+  padding: 0.625em 0.75em;
+  color: var(--cream);
+  font-size: 0.75em;
+  line-height: 1.4;
+  background: var(--navy-2);
+  border: var(--border-width) solid var(--hero-line);
+  border-radius: 1em;
+  box-shadow: 0 1.25em 2.5em -1.25em rgb(0 0 0 / 60%);
+  animation: floaty 6s ease-in-out infinite;
+}
+
+.floatTitle {
+  display: block;
+}
+
+.float .floatAvatar {
+  --avatar-size: 2.125rem;
+
+  color: var(--navy);
+  background: var(--peri-soft);
+}
+
+.floatInvite {
+  top: 10.625em;
+  left: -0.625em;
+}
+
+.floatPaid {
+  right: 0;
+  bottom: 6em;
+  animation-delay: -3s;
+}
+
+.ball {
+  position: absolute;
+  bottom: 2.5em;
+  left: 1.5em;
+  width: 4.5em;
+  height: 4.5em;
+  animation: floaty 5s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  50% {
+    transform: translateY(-0.625rem);
+  }
+}
+
+@media (max-width: 32.5rem) {
+  .floatInvite {
+    top: 2.5em;
+    left: -0.25em;
+  }
+
+  .floatPaid {
+    right: -0.25em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .ball {
+    animation: none;
+  }
+}

@@ -1,0 +1,21 @@
+diff --git a/src/server/players/players.ts b/src/server/players/players.ts
+index 572537d..f670da3 100644
+--- a/src/server/players/players.ts
++++ b/src/server/players/players.ts
+@@ -119,6 +119,16 @@ export function listSavedPlayerIds(user: User): readonly string[] {
+   return z.array(z.string()).parse(rows.map((row) => row.player_id));
+ }
+ 
++/** The display name of another player, shown in the invite dialog. */
++export function getPlayerName(user: User, playerId: string): string {
++  requireProfile(user);
++  const row = db.prepare('SELECT name FROM profiles WHERE user_id = ?').get(playerId);
++  if (row === undefined) {
++    throw new DomainError('notFound', { message: 'This player no longer exists.' });
++  }
++  return z.object({ name: z.string() }).parse(row).name;
++}
++
+ export function savePlayer(user: User, playerId: string): void {
+   if (playerId === user.id) {
+     throw new DomainError('validation', { message: 'You cannot save your own profile.' });

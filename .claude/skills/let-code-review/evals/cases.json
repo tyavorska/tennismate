@@ -1,0 +1,17 @@
+[
+  {
+    "id": "happy-city-leak",
+    "prompt": "review my changes",
+    "fixture": "fixtures/city-leak.patch",
+    "shouldTrigger": true,
+    "reportMustMention": ["src/server/players/players.ts", "city", "typecheck"],
+    "reportMustNotMention": ["not run", "approval", "wouldn't load"]
+  },
+  {
+    "id": "negative-log-question",
+    "prompt": "What does this error mean? Just explain it, in two sentences: SqliteError: no such table: profiles",
+    "shouldTrigger": false,
+    "reportMustMention": [],
+    "reportMustNotMention": []
+  }
+]

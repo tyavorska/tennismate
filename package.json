@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:cities": "NODE_ENV=production tsx --conditions=react-server scripts/import-cities.ts",
-    "import:courts": "NODE_ENV=production tsx --conditions=react-server scripts/import-courts.ts"
+    "import:courts": "NODE_ENV=production tsx --conditions=react-server scripts/import-courts.ts",
+    "eval:review": "tsx .claude/skills/let-code-review/evals/run.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",

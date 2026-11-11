@@ -19,6 +19,7 @@ Messaging uses Socket.IO. Route Handlers cannot hold a WebSocket open, so the de
 - **Authenticate the handshake** with the same session cookie. Look the token hash up with the
   `server/auth` code in an `io.use` middleware, and refuse the connection without a valid session.
   Check on every event that the user is a member of the conversation.
+- **Errors and retries** follow the "Errors" rules in `.claude/rules/backend.md` and `frontend.md`.
 - **Validate every event payload with Zod.** Event schemas live in `entities/conversation/model`,
   next to the message and conversation schemas, so server and client share them.
 - **Rooms.** One room per user (`user:<id>`), so every open tab of the recipient gets the message.

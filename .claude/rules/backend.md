@@ -61,6 +61,19 @@ One folder per area: `server/courts`, `server/profiles`, `server/players`, `serv
 - Never return another player's email or coordinates. Players are placed by district centroid, and
   only the distance is returned.
 
+## Errors
+
+To review the failure paths of a change, use the `error-handling` skill.
+
+- **One body for every error: a `Problem`** (`kind`, optional `message`, `fieldErrors`,
+  `requestId`, `retryAfterSeconds`) from `shared/api`, built with `problem()` or, for an
+  unexpected failure, `unexpectedProblem()`. The status comes from `errorPolicy`.
+- **An unexpected failure gets a `requestId`, one log line and a generic answer.** Never put a
+  stack, SQL, a library message or user data in a body, and never log a password, token, cookie or
+  email. Expected failures (`validation`, `forbidden`, `notFound`, `conflict`) are normal answers
+  and are not logged as errors.
+- **Never swallow an error.** No empty `catch`. Handle it fully or let it reach the handler.
+
 ## Database
 
 - Schema changes go through migrations. Follow `.claude/rules/migrations.md`.

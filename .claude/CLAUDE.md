@@ -58,7 +58,7 @@ renaming a Route Handler, run `typecheck` once so `RouteContext` types are regen
 - **Never return another player's email or coordinates.** Only the distance is returned.
 - **`server/` is never imported by client code.**
 - **The schema changes only through migrations.** Never edit a merged migration.
-- Every external boundary is validated with Zod. Failures follow the `error-handling` skill.
+- Every external boundary is validated with Zod. Failures follow the "Errors" rules in `backend.md` and `frontend.md`.
 
 ## Architecture: Feature-Sliced Design
 

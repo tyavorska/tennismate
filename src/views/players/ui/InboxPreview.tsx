@@ -3,7 +3,8 @@
 import { formatListTime } from '@/entities/conversation';
 import { OpenChatButton, useConversations, useInboxControls, useIsOnline } from '@/features/inbox';
 import type { Conversation } from '@/entities/conversation';
-import { Avatar, VisuallyHidden } from '@/shared/ui';
+import { toApiError } from '@/shared/api';
+import { Avatar, ErrorState, VisuallyHidden } from '@/shared/ui';
 import styles from './PlayersAside.module.css';
 
 const previewLimit = 4;
@@ -41,9 +42,18 @@ function PreviewRow({ conversation, timezone }: { conversation: Conversation; ti
 /** The latest conversations, kept up to date by the socket through the query cache. */
 export function InboxPreview() {
   const { timezone } = useInboxControls();
-  const { data = [], isPending } = useConversations();
+  const { data, error, isPending, refetch } = useConversations();
 
   if (isPending) return <p className={styles.preview}>Loading…</p>;
+  if (data === undefined) {
+    return (
+      <ErrorState
+        title="Messages did not load"
+        error={toApiError(error)}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
   if (data.length === 0) return <p className={styles.preview}>No messages yet.</p>;
   return (
     <ul className={styles.messages}>

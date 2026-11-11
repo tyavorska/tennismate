@@ -11,7 +11,7 @@ type AckHandler = (response: Json) => void;
 
 type TestSocketOptions = {
   /** Answers a send. Receives the payload and calls `acknowledge` with the server's reply. */
-  onSend?: (payload: Json, acknowledge: AckHandler) => void;
+  onSend?: (payload: Json, acknowledge: AckHandler, timeOut: () => void) => void;
 };
 
 /** A socket that never connects. Sends go to `onSend` instead of a server, and wait forever without it. */
@@ -20,7 +20,11 @@ export function createTestSocket({ onSend }: TestSocketOptions = {}): Socket {
   Object.defineProperty(socket, 'timeout', {
     value: () => ({
       emit: (_event: string, payload: Json, done: (error: Error | null, response: Json) => void) =>
-        onSend?.(payload, (response) => done(null, response)),
+        onSend?.(
+          payload,
+          (response) => done(null, response),
+          () => done(new Error('timed out'), null),
+        ),
     }),
   });
   return socket;

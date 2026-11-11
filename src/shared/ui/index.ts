@@ -1,4 +1,5 @@
 export { Avatar } from './avatar/Avatar';
+export { Banner } from './banner/Banner';
 export { Button } from './button/Button';
 export { ButtonLink } from './button/ButtonLink';
 export { Card } from './card/Card';
@@ -7,6 +8,7 @@ export type { CheckboxRow } from './checkbox-dropdown/CheckboxDropdown';
 export { CheckChip } from './check-chip/CheckChip';
 export { CountBadge } from './count-badge/CountBadge';
 export { Drawer } from './drawer/Drawer';
+export { ErrorState } from './error-state/ErrorState';
 export { Eyebrow } from './eyebrow/Eyebrow';
 export { FormAlert } from './form-alert/FormAlert';
 export { Icon } from './icon/Icon';

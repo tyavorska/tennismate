@@ -12,14 +12,14 @@ import {
   type ServerToClientEvents,
 } from '@/entities/conversation';
 import type { User } from '@/entities/user';
-import type { Problem } from '@/shared/api';
 import { sessionCookieName } from '@/shared/config';
 import { findUserBySessionToken } from '../auth';
 import { listPartnerIds, respondToInvite, sendMessage } from '../conversations';
-import { DomainError, fieldErrorsFrom } from '../http';
+import { fieldErrorsFrom } from '../http';
 import { getProfile } from '../profiles';
 import { readCookie } from './cookies';
 import { createPresence } from './presence';
+import { toProblem } from './problem';
 import { createSendLimit } from './sendLimit';
 
 type SocketData = { user: User };
@@ -30,21 +30,6 @@ const maxPayloadBytes = 16 * 1024;
 
 export function userRoom(userId: string): string {
   return `user:${userId}`;
-}
-
-function problemFrom(error: Error | string): Problem {
-  if (error instanceof DomainError) {
-    return { kind: error.kind, message: error.publicMessage, fieldErrors: error.fieldErrors };
-  }
-  console.error(
-    JSON.stringify({
-      level: 'error',
-      kind: 'server',
-      operation: 'realtime',
-      detail: error instanceof Error ? error.message : error,
-    }),
-  );
-  return { kind: 'server' };
 }
 
 /**
@@ -82,6 +67,7 @@ export function createRealtimeServer(
 
   // Every request answers on its acknowledgement and never throws into the socket.
   function handleRequest<TSchema extends z.ZodType>(
+    operation: string,
     socket: RealtimeSocket,
     schema: TSchema,
     payload: z.core.util.JSONType,
@@ -109,7 +95,7 @@ export function createRealtimeServer(
     } catch (error) {
       acknowledge({
         ok: false,
-        problem: problemFrom(error instanceof Error ? error : String(error)),
+        problem: toProblem(error instanceof Error ? error : String(error), operation),
       });
     }
   }
@@ -120,22 +106,29 @@ export function createRealtimeServer(
     acknowledge: ((ack: SendAck) => void) | undefined,
   ): void {
     const { user } = socket.data;
-    handleRequest(socket, sendMessageRequestSchema, payload, acknowledge, (input) => {
-      const sent = sendMessage(user, input);
-      io.to(userRoom(sent.recipientId)).emit(conversationEvents.messageNew, sent.forOther);
-      // The author's other tabs get it too. This tab gets it as the acknowledgement as well.
-      socket.to(userRoom(user.id)).emit(conversationEvents.messageNew, sent.forAuthor);
-      // A new conversation has no presence yet on either side.
-      io.to(userRoom(user.id)).emit(conversationEvents.presenceUpdate, {
-        userId: sent.recipientId,
-        online: presence.isOnline(sent.recipientId),
-      });
-      io.to(userRoom(sent.recipientId)).emit(conversationEvents.presenceUpdate, {
-        userId: user.id,
-        online: true,
-      });
-      return sent.forAuthor;
-    });
+    handleRequest(
+      'message.send',
+      socket,
+      sendMessageRequestSchema,
+      payload,
+      acknowledge,
+      (input) => {
+        const sent = sendMessage(user, input);
+        io.to(userRoom(sent.recipientId)).emit(conversationEvents.messageNew, sent.forOther);
+        // The author's other tabs get it too. This tab gets it as the acknowledgement as well.
+        socket.to(userRoom(user.id)).emit(conversationEvents.messageNew, sent.forAuthor);
+        // A new conversation has no presence yet on either side.
+        io.to(userRoom(user.id)).emit(conversationEvents.presenceUpdate, {
+          userId: sent.recipientId,
+          online: presence.isOnline(sent.recipientId),
+        });
+        io.to(userRoom(sent.recipientId)).emit(conversationEvents.presenceUpdate, {
+          userId: user.id,
+          online: true,
+        });
+        return sent.forAuthor;
+      },
+    );
   }
 
   function handleRespond(
@@ -144,17 +137,26 @@ export function createRealtimeServer(
     acknowledge: ((ack: SendAck) => void) | undefined,
   ): void {
     const { user } = socket.data;
-    handleRequest(socket, inviteResponseRequestSchema, payload, acknowledge, (input) => {
-      const answer = respondToInvite(user, input);
-      const others = userRoom(answer.otherId);
-      io.to(others).emit(conversationEvents.inviteUpdated, answer.updated.forOther);
-      socket.to(userRoom(user.id)).emit(conversationEvents.inviteUpdated, answer.updated.forAuthor);
-      if (answer.reply !== undefined) {
-        io.to(others).emit(conversationEvents.messageNew, answer.reply.forOther);
-        io.to(userRoom(user.id)).emit(conversationEvents.messageNew, answer.reply.forAuthor);
-      }
-      return answer.updated.forAuthor;
-    });
+    handleRequest(
+      'invite.respond',
+      socket,
+      inviteResponseRequestSchema,
+      payload,
+      acknowledge,
+      (input) => {
+        const answer = respondToInvite(user, input);
+        const others = userRoom(answer.otherId);
+        io.to(others).emit(conversationEvents.inviteUpdated, answer.updated.forOther);
+        socket
+          .to(userRoom(user.id))
+          .emit(conversationEvents.inviteUpdated, answer.updated.forAuthor);
+        if (answer.reply !== undefined) {
+          io.to(others).emit(conversationEvents.messageNew, answer.reply.forOther);
+          io.to(userRoom(user.id)).emit(conversationEvents.messageNew, answer.reply.forAuthor);
+        }
+        return answer.updated.forAuthor;
+      },
+    );
   }
 
   io.on('connection', (socket) => {

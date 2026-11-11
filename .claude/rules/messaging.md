@@ -75,28 +75,17 @@ file says what is built and the decisions that hold the code together.
 
 ## Errors
 
-Follow the `error-handling` skill. Load it, and its references, before adding a request or an
-event. How it applies here:
+The general rules are in `backend.md` and `frontend.md` ("Errors"). Specific to chat:
 
-- **Every request has a failure branch and keeps the player's text.** A send that fails, times out
-  or gets an answer the app cannot parse shows a `FormAlert` with the message of its kind from
-  `errorPolicy`, and the box keeps the text. Retry reuses the `clientMessageId`.
-- **A load that fails shows an `ErrorState`, never an empty list.** A refresh that fails while data
-  is on screen keeps it and shows a `Banner`. This holds for the inbox, the sidebar preview and the
-  thread.
-- **A refused handshake is a session problem.** `RealtimeProvider` sends the player to
-  `/sign-in?returnTo=`. Other connection errors are left to the socket to retry.
-- **A failed event answers on the acknowledgement** with a `Problem`. An unexpected error gets a
-  `requestId`, a log line with kind, operation, status, request id and time (`server/realtime/problem.ts`),
-  and no internals in the answer. A `DomainError` is expected and is not logged.
-- **Sends and invite answers retry on their own**, because repeating them is safe (the
-  `clientMessageId`; an answer given twice changes nothing). On `network`, `unavailable` and
-  `rateLimited` they are tried 3 times in all, after 1 s and 2 s, or after the `retryAfterSeconds`
-  the server sent with a rate limit. The thread says "Trying again…" meanwhile. The rule lives in
-  `registerConversationMutations`, which `QueryProvider` calls. Other writes do not retry.
-- **Not built yet:** a `Toast` for a failed mark-as-read, and one global handler that redirects a
-  REST call answered 401. That one needs care, because sign-in answers a wrong password with
-  `unauthenticated`.
+- A send that fails keeps the text, and Retry reuses the `clientMessageId`.
+- Sends and invite answers retry on their own (3 attempts, 1 s then 2 s, or the `retryAfterSeconds`
+  of a rate limit), registered in `registerConversationMutations`, which `QueryProvider` calls. The
+  thread says "Trying again…" meanwhile.
+- A refused handshake sends the player to `/sign-in?returnTo=` (`RealtimeProvider`). Other
+  connection errors are left to the socket to retry.
+- Not built yet: a `Toast` for a failed mark-as-read, and a global redirect for a REST call
+  answered 401 (a blanket one would loop, because sign-in answers a wrong password with
+  `unauthenticated`).
 
 ## Rules
 
@@ -106,7 +95,7 @@ event. How it applies here:
 - Server tests cover the failure branches: a stranger, another city, a repeated send, a bad cursor.
 - UI tests cover each failure kind of a send, the retries (works on the second try, gives up after
   three, no retry for a missing item), a failed first load, a failed refresh, and pressing Send
-  twice (`references/testing.md` of the skill has the full list).
+  twice.
 - The socket integration test (`server/realtime/realtimeServer.test.ts`) must pass before merging
   a change to events or presence.
 - UI tests use `TestRealtime` and `createTestSocket` from `@/shared/testing`, which answer sends

@@ -19,3 +19,5 @@ paths:
 - Client tests use `createTestQueryClient` and `renderWithQuery` from `@/shared/testing`, put data
   in the cache with `setQueryData`, and stub `fetch` with a small in-memory fake of the API.
 - Server tests follow the "Tests for backend code" section of `.claude/rules/backend.md`.
+- Test the failure branch of every request, not only success: the error message, the input kept, a
+  failed first load, a failed refresh, and that pressing twice sends once.

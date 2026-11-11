@@ -74,7 +74,7 @@ These are now written down in `.claude/rules/messaging.md`, which is how stage C
 
 ## The error-handling skill was not used in stage B
 
-The `error-handling` skill says to load it whenever code calls an API or adds a Route Handler. In
+The `error-handling` skill (since removed) said to load it whenever code calls an API or adds a Route Handler. In
 stage B it was not loaded: only the first part of `SKILL.md` was read, and its three references
 were skipped. The error handling was built from the category table and from the patterns already
 in the repo. An audit against the skill afterwards found these gaps:
@@ -101,6 +101,11 @@ mark-as-read, and a global handler for expired sessions in `QueryProvider`.
 That last one needs care: sign-in answers a wrong password with `unauthenticated`, so a blanket
 redirect would loop.
 
+Afterwards the skill's references, which described a design the code never followed, were deleted.
+The hard rules moved into `backend.md` and `frontend.md`, which load by path, as the Claude Code
+docs advise for "always do X" rules. The skill came back as a short review procedure (checklist and
+test matrix), because a procedure is what the docs say a skill is for.
+
 The lesson for the comparison: a rule or skill only helps if it is loaded. The skills that match
 the work should be named in the area rule so they are not skipped.
 
@@ -116,7 +121,8 @@ the work should be named in the area rule so they are not skipped.
 
 1. Write the area rule at the end of a feature, with the decisions that were not obvious.
 2. Update the rule in the same commit that changes the behavior (C did).
-3. Name the skills that apply in the area rule (`messaging.md` now points to `error-handling`).
+3. Put the hard rules in path-scoped rule files, which load by themselves. Keep a skill for the
+   review procedure only.
 4. Keep the rule next to the skill that holds the design: the skill says how, the rule says what
    is built and why.
 5. Keep tests for the failure branches. They found the ordering flaw that the rules did not.

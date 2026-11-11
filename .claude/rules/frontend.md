@@ -58,9 +58,30 @@ export const playerQueries = {
   both success and error. Saving a player updates the cache at once and rolls back on error. Other
   writes take the server's answer and put it in the cache. After a profile change call
   `router.refresh()`, because the header reads the profile on the server.
-- Failures follow the `error-handling` skill. A select cannot show its own error, so server
-  `fieldErrors` for selects are joined into the form's `FormAlert` (`messagesForFields`). The form
-  keeps everything typed. A failed refresh keeps the data already loaded and offers a retry.
+- A select cannot show its own error, so server `fieldErrors` for selects are joined into the form's
+  `FormAlert` (`messagesForFields`). The form keeps everything typed.
+
+## Errors
+
+To review the failure paths of a change, use the `error-handling` skill.
+
+- **Every query, mutation and socket request has a failure branch.** Nothing fails silently.
+- **One error model.** Failures reach components as an `ApiError` with a `kind`. Read `kind`, never
+  a status code. Messages come from `errorPolicy` in `shared/api`. Never write one in JSX or in a
+  test fixture.
+- **A load that fails and has no data shows `ErrorState`, never an empty list or a blank area.**
+  Do not default `data` to `[]` and then show an empty state: check the error first.
+- **A refresh that fails with data on screen keeps the data** and shows a `Banner` with Try again.
+- **A submit or send that fails shows `FormAlert` and keeps every input.** Never reset the form or
+  clear the box on error. The control is disabled while pending, so a double press sends once.
+- **Retry only `network`, `unavailable` and `rateLimited`**, and for a write only when repeating it
+  is safe. Other writes do not retry.
+- **`unauthenticated` sends the player to `/sign-in?returnTo=`.** Only a refused socket handshake
+  does so today. A blanket redirect for REST would loop, because sign-in answers a wrong password
+  with `unauthenticated`.
+- **Show a short reference** (`requestId`) for `server`, `malformed` and `unexpected`.
+- `ErrorState`, `Banner` and `FormAlert` are in `shared/ui`. If another error component is needed,
+  add it there. Do not write a one-off.
 
 ## Forms
 

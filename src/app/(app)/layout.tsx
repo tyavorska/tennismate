@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { getCurrentUser } from '@/server/auth';
 import { getViewer } from '@/server/players';
+import { RealtimeProvider } from '@/app/providers';
 import { AppShell } from '@/widgets/app-shell';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -12,5 +13,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const viewer = await getViewer();
   if (viewer === undefined) redirect('/choose-city');
 
-  return <AppShell viewer={viewer}>{children}</AppShell>;
+  return (
+    <RealtimeProvider>
+      <AppShell viewer={viewer}>{children}</AppShell>
+    </RealtimeProvider>
+  );
 }

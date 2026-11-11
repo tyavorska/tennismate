@@ -24,8 +24,7 @@
   line-height: 1.0769;
 }
 
-.messages,
-.games {
+.messages {
   display: flex;
   flex-direction: column;
   list-style: none;
@@ -98,12 +97,6 @@
   border-radius: 50%;
 }
 
-.games {
-  display: flex;
-  flex-direction: column;
-  list-style: none;
-}
-
 .messages {
   gap: var(--space-1);
 }
@@ -148,20 +141,4 @@
   height: 0.5rem;
   background: var(--peri-text);
   border-radius: 50%;
-}
-
-.calendarLink {
-  color: var(--peri);
-  font-size: var(--text-btn);
-  font-weight: 800;
-  line-height: 1.3846;
-  text-decoration: none;
-}
-
-:global(:root[data-theme='dark']) .calendarLink {
-  color: var(--peri-hi);
-}
-
-.calendarLink:hover {
-  color: var(--foreground);
 }

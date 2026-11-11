@@ -1,9 +1,9 @@
-import { calendarEventSchema, freePlayerSchema } from '@/entities/game';
-import type { CalendarEvent, FreePlayer } from '@/entities/game';
+import { calendarEventSchema } from '@/entities/game';
+import type { CalendarEvent } from '@/entities/game';
 import { addDays, isoDateSchema, toUtc, weekdayIndex, type IsoDate } from '@/shared/lib';
 
-export { addDays, calendarEventSchema, freePlayerSchema, isoDateSchema, weekdayIndex };
-export type { CalendarEvent, FreePlayer, IsoDate };
+export { addDays, calendarEventSchema, isoDateSchema, weekdayIndex };
+export type { CalendarEvent, IsoDate };
 
 export type CalendarDay = {
   readonly iso: IsoDate;
@@ -96,17 +96,6 @@ export function describeDay(iso: IsoDate, todayIso: IsoDate): string {
 
 export function eventsOn(events: readonly CalendarEvent[], iso: IsoDate): readonly CalendarEvent[] {
   return events.filter((event) => event.date === iso);
-}
-
-/** Players who are free on a day. Nobody is free on a day that has passed. */
-export function freeOn(
-  players: readonly FreePlayer[],
-  iso: IsoDate,
-  todayIso: IsoDate,
-): readonly FreePlayer[] {
-  if (iso < todayIso) return [];
-  const weekday = weekdayIndex(iso);
-  return players.filter((player) => player.weekdays.includes(weekday));
 }
 
 export function plural(count: number, one: string, many: string): string {

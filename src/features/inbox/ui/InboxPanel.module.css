@@ -325,3 +325,18 @@
   font-size: 1.125rem;
   border-radius: 50%;
 }
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4286;
+}
+
+.sendError {
+  padding: 0 var(--space-4) var(--space-2);
+}

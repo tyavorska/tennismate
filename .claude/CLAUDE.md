@@ -23,19 +23,20 @@ this Next.js version differs from older training data.
 | Forms               | React Hook Form (`useForm` + `zodResolver` from `@hookform/resolvers`)  |
 | HTTP API            | REST through Next Route Handlers (`app/api/**/route.ts`)                |
 | Database            | SQLite (`node:sqlite`) now; PostgreSQL when a second instance is needed |
-| Realtime messaging  | Socket.IO in a separate Node process (not installed yet)                |
+| Realtime messaging  | Socket.IO in a separate Node process (`npm run realtime`)               |
 | Tests               | Vitest + Testing Library, co-located with the code under test           |
 | Lint / format       | ESLint (`eslint-config-next` + `eslint-config-prettier`), Prettier      |
 | Runtime             | Node 24 LTS (see `.nvmrc`), npm                                         |
 
-`socket.io` and `socket.io-client` are the chosen realtime libraries but are not installed yet. Add
-them with the first messaging code (see the `realtime-messaging` skill). Do not substitute
-alternatives (no `ws`, SSE or polling for chat).
+`socket.io` and `socket.io-client` carry messaging and online status (see the `realtime-messaging`
+skill). Run `npm run dev` and `npm run realtime` together. Do not substitute alternatives (no `ws`,
+SSE or polling for chat).
 
 ## Commands
 
 ```bash
 npm run dev          # dev server on http://localhost:3000
+npm run realtime     # Socket.IO server on http://localhost:4000 (chat, online status)
 npm run build        # production build
 npm run lint         # ESLint and Stylelint
 npm run typecheck    # next typegen, then tsc --noEmit

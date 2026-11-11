@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { sampleConversations } from '@/entities/conversation';
 import type { Player } from '@/entities/player';
 import { InboxButton, InboxProvider } from '@/features/inbox';
 import { ThemeToggle } from '@/features/toggle-theme';
@@ -15,7 +14,7 @@ type AppShellProps = {
 
 export function AppShell({ viewer, children }: AppShellProps) {
   return (
-    <InboxProvider conversations={sampleConversations}>
+    <InboxProvider viewer={{ id: viewer.id, timezone: viewer.city.timezone }}>
       <div className={styles.shell}>
         <header className={styles.header}>
           <div className={styles.bar}>

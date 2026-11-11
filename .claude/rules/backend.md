@@ -26,7 +26,7 @@ paths:
 ## Layout and decisions
 
 One folder per area: `server/courts`, `server/profiles`, `server/players`, `server/games`,
-`server/auth`, `server/db`, `server/http`. Each exposes an `index.ts`. Other `server/` code and
+`server/conversations`, `server/realtime`, `server/auth`, `server/db`, `server/http`. Each exposes an `index.ts`. Other `server/` code and
 `app/` import through it. An area may import another area, never create a cycle.
 
 | Decision      | Choice and when to change it                                                                                                      |

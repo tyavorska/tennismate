@@ -32,11 +32,16 @@ Read this before building any of the items below.
 Replace these with the same pattern (table, `server/` module, Route Handler, query key) when they
 are built. Until then they stay clearly marked as samples and must not be mixed into real data.
 
-- Inbox and chat (`entities/conversation`, invite courts and slots) until the Socket.IO work.
-- "Next games" (`entities/game`) and the dashboard cards. They disagree with the real calendar.
-- "Who's free" faces on the calendar (needs an availability model).
+- The court and time choices in the chat invite (`features/inbox/model/inviteOptions.ts`) are fixed lists, not real courts. An invite is a message that carries a court and a time, and the latest one is the conversation's plan. It does not create a game or a booking.
 - Change password, delete account, notification settings.
 - The level quiz result only changes the filter locally. It does not save to the profile.
-- `online` is always `false`. `freeTonight` and `wantsDoublesPartner` are stored flags until
-  availability exists.
+- `online` on a player listing is always `false`; the online dot comes from the socket (`presenceQueries`).
+- `freeTonight` and `wantsDoublesPartner` are stored flags until availability exists.
 - Ranking, tournaments news, court offers, payments and bookings do not exist yet.
+
+## No invented people
+
+Never put made-up players in the UI. The "who's free" faces, "Next games" and the home dashboard were
+removed for that reason. Bring them back only from real data: an availability model for who is free,
+and bookings for next games. Demo players exist only in development, as real `users` rows
+(`server/db/demoData.ts`).

@@ -5,8 +5,6 @@ import {
   describeDay,
   eventsOn,
   formatDay,
-  freeOn,
-  freePlayerSchema,
   isoDateSchema,
   rangeTitle,
   weekdayIndex,
@@ -104,37 +102,6 @@ describe('eventsOn', () => {
     ];
 
     expect(eventsOn(events, monday).map((event) => event.id)).toEqual(['b']);
-  });
-});
-
-describe('freeOn', () => {
-  const players = [
-    freePlayerSchema.parse({
-      id: 'a',
-      name: 'Marta K.',
-      initials: 'MK',
-      rating: 3.5,
-      window: 'Free 18:00–21:00',
-      district: 'Podgórze',
-      weekdays: [0, 2],
-    }),
-    freePlayerSchema.parse({
-      id: 'b',
-      name: 'Ola N.',
-      initials: 'ON',
-      rating: 3,
-      window: 'Free 17:00–20:00',
-      district: 'Nowa Huta',
-      weekdays: [1],
-    }),
-  ];
-
-  it('lists the players free on that weekday', () => {
-    expect(freeOn(players, monday, monday).map((player) => player.id)).toEqual(['a']);
-  });
-
-  it('lists nobody for a day that has passed', () => {
-    expect(freeOn(players, monday, iso('2026-11-03'))).toEqual([]);
   });
 });
 

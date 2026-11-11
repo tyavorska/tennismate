@@ -1,7 +1,4 @@
-export { calendarEventSchema, freePlayerSchema } from './model/calendarEvent';
-export type { CalendarEvent, FreePlayer } from './model/calendarEvent';
-export { nextGameSchema, sampleNextGames } from './model/nextGame';
-export type { NextGame } from './model/nextGame';
-export { NextGameList } from './ui/NextGameList';
+export { calendarEventSchema } from './model/calendarEvent';
+export type { CalendarEvent } from './model/calendarEvent';
 export { calendarApi } from './api/calendarApi';
 export { calendarQueries } from './api/calendarQueries';

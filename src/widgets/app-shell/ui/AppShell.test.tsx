@@ -1,8 +1,30 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { type z } from 'zod';
 import { playerSchema } from '@/entities/player';
-import { renderWithQuery } from '@/shared/testing';
+import {
+  applyMessageNew,
+  conversationQueries,
+  conversationSchema,
+  inviteResponseRequestSchema,
+  messageSchema,
+  presenceQueries,
+  sendAckSchema,
+  sendMessageRequestSchema,
+  type Conversation,
+  type InviteResponseRequest,
+  type InviteStatus,
+  type Message,
+} from '@/entities/conversation';
+import { calendarQueries } from '@/entities/game';
+import {
+  createTestQueryClient,
+  createTestSocket,
+  renderWithQuery,
+  TestRealtime,
+} from '@/shared/testing';
 import { AppShell } from '../index';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }));
@@ -16,12 +38,176 @@ const viewer = playerSchema.parse({
   city: { id: 1, name: 'Kraków', timezone: 'Europe/Warsaw' },
 });
 
-function renderShell(): void {
-  renderWithQuery(
-    <AppShell viewer={viewer}>
-      <p>Page content</p>
-    </AppShell>,
+function uuid(n: number): string {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
+const viewerId = viewer.id;
+
+function message(n: number, conversationN: number, from: 'me' | 'them', text: string): Message {
+  return messageSchema.parse({
+    id: uuid(1000 + n),
+    conversationId: uuid(conversationN),
+    senderId: from === 'me' ? viewerId : uuid(conversationN + 50),
+    clientMessageId: uuid(2000 + n),
+    text,
+    sentAt: `2026-11-04T09:0${n}:00.000Z`,
+  });
+}
+
+function conversation(n: number, name: string, last: Message, unreadCount: number): Conversation {
+  return conversationSchema.parse({
+    id: uuid(n),
+    partner: {
+      id: uuid(n + 50),
+      name,
+      initials: name.slice(0, 2).toUpperCase(),
+      subtitle: 'NTRP 3.0 · Nowa Huta',
+    },
+    lastMessage: last,
+    unreadCount,
+  });
+}
+
+const olaMessages = [
+  message(1, 1, 'them', 'Are we still on for Saturday?'),
+  message(2, 1, 'me', 'Yes! 10:00 works.'),
+  message(3, 1, 'them', "Perfect. I'll bring new balls."),
+];
+const ola = conversation(1, 'Ola N.', olaMessages[2] ?? message(3, 1, 'them', ''), 2);
+
+const playDay = { date: '2026-11-14', time: '10:00', startsAt: '2026-11-14T09:00:00.000Z' };
+
+function inviteMessage(status: InviteStatus, from: 'me' | 'them'): Message {
+  return messageSchema.parse({
+    ...message(4, 2, from, "Let's play at Park Jordana, Sat 14 Nov · 10:00"),
+    invite: {
+      id: uuid(7000),
+      status,
+      proposerId: from === 'me' ? viewerId : uuid(52),
+      court: 'Park Jordana',
+      ...playDay,
+    },
+  });
+}
+
+const piotrInvite = inviteMessage('pending', 'them');
+const piotr = conversation(2, 'Piotr W.', piotrInvite, 0);
+const courts = [
+  { name: 'Kazimierz Clay Club', district: 'Kazimierz' },
+  { name: 'Park Jordana', district: 'Krowodrza' },
+];
+
+let markedRead: string[] = [];
+const onSend = vi.fn();
+
+function installFakeApi(): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: string, init?: { method?: string }) => {
+      const json = (body: z.core.util.JSONType): Response => new Response(JSON.stringify(body));
+      if (input === '/api/conversations') return Promise.resolve(json([ola, piotr]));
+      if (init?.method === 'PUT') {
+        markedRead.push(input);
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (input === `/api/conversations/${ola.id}/messages`)
+        return Promise.resolve(json(olaMessages));
+      if (input === `/api/conversations/${piotr.id}/messages`)
+        return Promise.resolve(json([piotrInvite]));
+      if (input === '/api/courts') return Promise.resolve(json(courts));
+      return Promise.resolve(new Response(null, { status: 404 }));
+    }),
   );
+}
+
+function renderShell(client: QueryClient = createTestQueryClient()): QueryClient {
+  renderWithQuery(
+    <TestRealtime socket={createTestSocket({ onSend })}>
+      <AppShell viewer={viewer}>
+        <p>Page content</p>
+      </AppShell>
+    </TestRealtime>,
+    client,
+  );
+  return client;
+}
+
+const sentInviteId = uuid(7100);
+
+const statusByAction = {
+  accept: 'accepted',
+  decline: 'declined',
+  cancel: 'cancelled',
+} as const satisfies Record<InviteResponseRequest['action'], InviteStatus>;
+
+function ack(
+  conversationOf: Conversation,
+  saved: Message,
+  plan?: Conversation['plan'],
+): z.core.util.JSONType {
+  const updated = { ...conversationOf, lastMessage: saved, plan, unreadCount: 0 };
+  return sendAckSchema.parse({ ok: true, event: { conversation: updated, message: saved } });
+}
+
+/** The server's answer to a send, or to an answer to an invite. */
+function accepted(payload: z.core.util.JSONType): z.core.util.JSONType {
+  const answer = inviteResponseRequestSchema.safeParse(payload);
+  if (answer.success) {
+    const { action, inviteId } = answer.data;
+    const status = statusByAction[action];
+    if (inviteId === sentInviteId) {
+      return ack(ola, messageWithInvite(ola, 'me', status));
+    }
+    const plan = action === 'accept' ? { court: 'Park Jordana', ...playDay } : undefined;
+    return ack(piotr, inviteMessage(status, 'them'), plan);
+  }
+
+  const { recipientId, clientMessageId, text, invite } = sendMessageRequestSchema.parse(payload);
+  const target = recipientId === ola.partner.id ? ola : piotr;
+  const saved = messageSchema.parse({
+    id: uuid(9000),
+    conversationId: target.id,
+    senderId: viewerId,
+    clientMessageId,
+    text,
+    invite:
+      invite === undefined
+        ? undefined
+        : {
+            id: sentInviteId,
+            status: 'pending',
+            proposerId: viewerId,
+            court: invite.court,
+            date: invite.date,
+            time: invite.time,
+            startsAt: `${invite.date}T09:00:00.000Z`,
+          },
+    sentAt: '2026-11-04T09:30:00.000Z',
+  });
+  return ack(target, saved);
+}
+
+function messageWithInvite(
+  target: Conversation,
+  from: 'me' | 'them',
+  status: InviteStatus,
+): Message {
+  return messageSchema.parse({
+    id: uuid(9000),
+    conversationId: target.id,
+    senderId: from === 'me' ? viewerId : target.partner.id,
+    clientMessageId: uuid(9001),
+    text: 'Play?',
+    invite: {
+      id: sentInviteId,
+      status,
+      proposerId: viewerId,
+      court: 'Kazimierz Clay Club',
+      ...playDay,
+    },
+    sentAt: '2026-11-04T09:30:00.000Z',
+  });
 }
 
 async function openAccountMenu(): Promise<ReturnType<typeof userEvent.setup>> {
@@ -33,6 +219,9 @@ async function openAccountMenu(): Promise<ReturnType<typeof userEvent.setup>> {
 beforeEach(() => {
   router.replace.mockReset();
   router.refresh.mockReset();
+  markedRead = [];
+  onSend.mockReset();
+  installFakeApi();
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -80,55 +269,302 @@ describe('AppShell', () => {
   });
 
   describe('inbox', () => {
-    it('shows the number of unread conversations on the Messages button', () => {
+    it('shows the number of unread conversations on the Messages button', async () => {
       renderShell();
 
-      expect(screen.getByRole('button', { name: 'Messages, 1 unread' })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Messages, 1 unread' })).toBeInTheDocument();
     });
 
-    it('opens the conversation list in a drawer', async () => {
+    it('lists the conversations in a drawer with the latest message of each', async () => {
       renderShell();
       const user = userEvent.setup();
+      await screen.findByRole('button', { name: 'Messages, 1 unread' });
 
       await user.click(screen.getByRole('button', { name: /Messages/ }));
 
       const drawer = screen.getByRole('dialog', { name: 'Messages' });
-      expect(within(drawer).getAllByRole('listitem')).toHaveLength(6);
+      expect(await within(drawer).findAllByRole('listitem')).toHaveLength(2);
+      expect(within(drawer).getByText("Perfect. I'll bring new balls.")).toBeInTheDocument();
     });
 
-    it('marks a conversation as read when it is opened', async () => {
-      renderShell();
+    it('says so when there are no conversations yet', async () => {
+      const client = createTestQueryClient();
+      client.setQueryData(conversationQueries.list().queryKey, []);
+      renderShell(client);
       const user = userEvent.setup();
+
       await user.click(screen.getByRole('button', { name: /Messages/ }));
 
-      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+      expect(within(screen.getByRole('dialog')).getByText(/No messages yet/)).toBeInTheDocument();
+    });
+
+    it('opens a conversation, shows its messages and marks it read', async () => {
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+
+      expect(await screen.findByText('Are we still on for Saturday?')).toBeInTheDocument();
+      await waitFor(() => expect(markedRead).toEqual([`/api/conversations/${ola.id}/read`]));
       await user.click(screen.getByRole('button', { name: 'Back to messages' }));
       await user.click(screen.getByRole('button', { name: 'Close' }));
-
       expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
     });
 
-    it('sends a reply into the open conversation', async () => {
+    it('sends a reply, shows it in the thread and clears the box', async () => {
+      onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
       renderShell();
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Messages/ }));
-      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+      await screen.findByText('Are we still on for Saturday?');
 
       await user.type(screen.getByRole('textbox', { name: 'Message' }), 'See you at 10');
       await user.click(screen.getByRole('button', { name: 'Send' }));
 
-      expect(screen.getByText('See you at 10')).toBeInTheDocument();
+      expect(await screen.findByText('See you at 10')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('');
+      expect(onSend).toHaveBeenCalledWith(
+        expect.objectContaining({ recipientId: ola.partner.id, text: 'See you at 10' }),
+        expect.any(Function),
+      );
+    });
+
+    describe('game invites', () => {
+      async function openThread(name: RegExp): Promise<ReturnType<typeof userEvent.setup>> {
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole('button', { name: /Messages/ }));
+        await user.click(await screen.findByRole('button', { name: name }));
+        return user;
+      }
+
+      it('proposes a court and time, and waits for the other player to answer', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        expect(screen.getByText('No court booked yet')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Propose a court' }));
+        await user.click(await screen.findByRole('button', { name: /Send "let's play" invite/ }));
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText('Waiting for Ola')).toBeInTheDocument();
+        expect(within(card).getByText('Kazimierz Clay Club')).toBeInTheDocument();
+        expect(screen.getByText('No court booked yet')).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledWith(
+          expect.objectContaining({
+            invite: {
+              court: 'Kazimierz Clay Club',
+              date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+              time: '10:00',
+            },
+          }),
+          expect.any(Function),
+        );
+        expect(screen.queryByRole('form', { name: 'Propose a court' })).not.toBeInTheDocument();
+      });
+
+      it('lets the proposer cancel an invite that is waiting', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        await user.click(screen.getByRole('button', { name: 'Propose a court' }));
+        await user.click(await screen.findByRole('button', { name: /Send "let's play" invite/ }));
+
+        await user.click(await screen.findByRole('button', { name: 'Cancel invite' }));
+
+        expect(await screen.findByText('Cancelled')).toBeInTheDocument();
+        expect(onSend).toHaveBeenLastCalledWith(
+          { inviteId: sentInviteId, action: 'cancel' },
+          expect.any(Function),
+        );
+      });
+
+      it('shows an invite from the other player with Accept and Decline', async () => {
+        renderShell();
+        await openThread(/Piotr W\./);
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText('Sat 14 Nov · 10:00')).toBeInTheDocument();
+        expect(within(card).getByText('Park Jordana')).toBeInTheDocument();
+        expect(within(card).getByRole('button', { name: 'Accept' })).toBeInTheDocument();
+        expect(within(card).getByRole('button', { name: 'Decline' })).toBeInTheDocument();
+      });
+
+      it('confirms the game for both, links to the calendar and plans the game', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        const client = createTestQueryClient();
+        const invalidate = vi.spyOn(client, 'invalidateQueries');
+        renderShell(client);
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Accept' }));
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText(/Confirmed by both/)).toBeInTheDocument();
+        expect(within(card).getByRole('link', { name: 'in your calendar' })).toHaveAttribute(
+          'href',
+          '/calendar?day=2026-11-14',
+        );
+        expect(screen.getByText('Sat 14 Nov · 10:00 · Park Jordana')).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledWith(
+          { inviteId: piotrInvite.invite?.id, action: 'accept' },
+          expect.any(Function),
+        );
+        expect(invalidate).toHaveBeenCalledWith(calendarQueries.all());
+      });
+
+      it('declines an invite', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Decline' }));
+
+        expect(await screen.findByText('Declined')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+      });
+
+      it('says so when an invite can no longer be answered, and leaves the card as it was', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({
+            ok: false,
+            problem: { kind: 'conflict', message: 'The time of this invite has passed.' },
+          }),
+        );
+        renderShell();
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Accept' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          'The time of this invite has passed.',
+        );
+        expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
+      });
+
+      it('updates the card when the other player answers while it is open', async () => {
+        const client = renderShell();
+        await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        const mine = messageWithInvite(ola, 'me', 'pending');
+        act(() =>
+          applyMessageNew(client, { conversation: { ...ola, lastMessage: mine }, message: mine }),
+        );
+        expect(await screen.findByText('Waiting for Ola')).toBeInTheDocument();
+
+        const answered = messageWithInvite(ola, 'me', 'accepted');
+        act(() =>
+          applyMessageNew(client, {
+            conversation: {
+              ...ola,
+              lastMessage: answered,
+              plan: { court: 'Kazimierz Clay Club', ...playDay },
+            },
+            message: answered,
+          }),
+        );
+
+        expect(await screen.findByText(/Confirmed by both/)).toBeInTheDocument();
+        expect(screen.queryByText('Waiting for Ola')).not.toBeInTheDocument();
+      });
+
+      it('shows an invite whose time has passed as expired', async () => {
+        const client = renderShell();
+        await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        const old = messageWithInvite(ola, 'them', 'expired');
+
+        act(() =>
+          applyMessageNew(client, { conversation: { ...ola, lastMessage: old }, message: old }),
+        );
+
+        expect(await screen.findByText('Expired')).toBeInTheDocument();
+      });
     });
 
     it('sends a quick reply', async () => {
+      onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
       renderShell();
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Messages/ }));
-      await user.click(screen.getByRole('button', { name: /Ola N\./ }));
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+      await screen.findByText('Are we still on for Saturday?');
 
       await user.click(screen.getByRole('button', { name: 'Sounds good' }));
 
-      expect(screen.getByText('Sounds good', { selector: 'p' })).toBeInTheDocument();
+      expect(await screen.findByText('Sounds good', { selector: 'p' })).toBeInTheDocument();
+    });
+
+    it('keeps the text and says what went wrong when a message cannot be sent', async () => {
+      onSend.mockImplementation((_payload, acknowledge) =>
+        acknowledge({ ok: false, problem: { kind: 'unavailable' } }),
+      );
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+      await screen.findByText('Are we still on for Saturday?');
+
+      await user.type(screen.getByRole('textbox', { name: 'Message' }), 'See you at 10');
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('temporarily unavailable');
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+    });
+
+    it('sends the same client message id again when a failed message is repeated', async () => {
+      onSend.mockImplementationOnce((_payload, acknowledge) =>
+        acknowledge({ ok: false, problem: { kind: 'unavailable' } }),
+      );
+      onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+      renderShell();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+      await screen.findByText('Are we still on for Saturday?');
+      await user.type(screen.getByRole('textbox', { name: 'Message' }), 'See you at 10');
+
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+      await screen.findByRole('alert');
+      await user.click(screen.getByRole('button', { name: 'Send' }));
+
+      await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
+      const [first, second] = onSend.mock.calls.map(([payload]) => payload);
+      expect(second.clientMessageId).toBe(first.clientMessageId);
+    });
+
+    it('shows a message the moment it arrives in the open conversation', async () => {
+      const client = renderShell();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+      await screen.findByText('Are we still on for Saturday?');
+
+      const arrived = message(7, 1, 'them', 'Running 5 minutes late');
+      act(() =>
+        applyMessageNew(client, {
+          conversation: { ...ola, lastMessage: arrived, unreadCount: 1 },
+          message: arrived,
+        }),
+      );
+
+      expect(await screen.findByText('Running 5 minutes late')).toBeInTheDocument();
+    });
+
+    it('shows who is online', async () => {
+      const client = createTestQueryClient();
+      client.setQueryData(presenceQueries.online().queryKey, [ola.partner.id]);
+      renderShell(client);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+
+      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+
+      expect(await screen.findByText(/· Online/)).toBeInTheDocument();
     });
   });
 

@@ -12,8 +12,14 @@ import {
   type OpenGame,
   type PlayerListing,
 } from '@/entities/player';
-import { sampleConversations } from '@/entities/conversation';
-import { createTestQueryClient, renderWithQuery } from '@/shared/testing';
+import { conversationQueries } from '@/entities/conversation';
+import { courtQueries } from '@/entities/court';
+import {
+  createTestQueryClient,
+  createTestSocket,
+  renderWithQuery,
+  TestRealtime,
+} from '@/shared/testing';
 import { InboxProvider } from '@/features/inbox';
 import { PlayerFinder } from '../index';
 
@@ -23,7 +29,12 @@ const navigation = await vi.hoisted(async () => {
 });
 vi.mock('next/navigation', () => navigation.module);
 
-beforeEach(() => navigation.setUrl('/players'));
+const onSend = vi.fn();
+
+beforeEach(() => {
+  navigation.setUrl('/players');
+  onSend.mockClear();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 function player(
@@ -165,15 +176,21 @@ function renderFinder(initialDialog?: 'offer' | 'quiz'): ReturnType<typeof userE
   const client = createTestQueryClient();
   client.setQueryData(openGameQueries.list().queryKey, server.games);
   client.setQueryData(playerQueries.saved().queryKey, server.saved);
+  client.setQueryData(conversationQueries.list().queryKey, []);
+  client.setQueryData(courtQueries.list().queryKey, courts);
   renderWithQuery(
-    <InboxProvider conversations={sampleConversations}>
-      <PlayerFinder
-        players={players}
-        courts={courts}
-        viewerRating={ntrpRatingSchema.parse(3.5)}
-        aside={<aside aria-label="Side panel">Side content</aside>}
-      />
-    </InboxProvider>,
+    <TestRealtime socket={createTestSocket({ onSend })}>
+      <InboxProvider
+        viewer={{ id: '00000000-0000-4000-8000-000000000001', timezone: 'Europe/Warsaw' }}
+      >
+        <PlayerFinder
+          players={players}
+          courts={courts}
+          viewerRating={ntrpRatingSchema.parse(3.5)}
+          aside={<aside aria-label="Side panel">Side content</aside>}
+        />
+      </InboxProvider>
+    </TestRealtime>,
     client,
   );
   return userEvent.setup();
@@ -378,23 +395,28 @@ describe('PlayerFinder', () => {
       expect(within(chat).getByRole('heading', { name: 'Piotr K.' })).toBeInTheDocument();
       expect(within(chat).getByText('No court booked yet')).toBeInTheDocument();
       expect(within(chat).getByRole('form', { name: 'Propose a court' })).toBeInTheDocument();
-      expect(
-        within(chat).getByText('Say hi to Piotr. Your first message arrives as a request.'),
-      ).toBeInTheDocument();
+      expect(within(chat).getByText('Say hi to Piotr.')).toBeInTheDocument();
     });
 
-    it('offers court and time choices and sends the chosen invite', async () => {
+    it('offers the courts of the city and sends the chosen invite as a message', async () => {
       const user = renderFinder();
       await user.click(screen.getByRole('button', { name: "Let's play with Marta K." }));
       const chat = screen.getByRole('dialog', { name: 'Messages' });
 
-      await user.click(within(chat).getByRole('radio', { name: 'Wed 4 Nov 18:00' }));
+      await user.click(within(chat).getByRole('button', { name: /Time/ }));
+      await user.click(screen.getByRole('option', { name: '18:00' }));
       await user.click(within(chat).getByRole('button', { name: /Send "let's play" invite/ }));
 
-      expect(
-        within(chat).getByText("Let's play at Kazimierz Clay Club, Wed 4 Nov 18:00?"),
-      ).toBeInTheDocument();
-      expect(within(chat).getByText('Wed 4 Nov 18:00 · Kazimierz Clay Club')).toBeInTheDocument();
+      expect(onSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invite: {
+            court: courts[0]?.name,
+            date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+            time: '18:00',
+          },
+        }),
+        expect.any(Function),
+      );
     });
 
     it('shows all players in a grid with a sort control and goes back to the lists', async () => {

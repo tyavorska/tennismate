@@ -4,6 +4,8 @@ Read this before building any of the items below.
 
 ## Planned, not built yet
 
+- **Cancel or reschedule a confirmed invite game.** Either player cancels from the chat card. It
+  removes the game from both calendars, marks the invite `cancelled`, and tells the other player.
 - **Clubs register and own their courts.** A club that is not in the database creates a court
   (`source = 'manual'`), and that alone opens a city, so a city does not need an import to open. A
   club that is already there (imported) **claims** the existing court instead of making a
@@ -32,11 +34,18 @@ Read this before building any of the items below.
 Replace these with the same pattern (table, `server/` module, Route Handler, query key) when they
 are built. Until then they stay clearly marked as samples and must not be mixed into real data.
 
-- Inbox and chat (`entities/conversation`, invite courts and slots) until the Socket.IO work.
-- "Next games" (`entities/game`) and the dashboard cards. They disagree with the real calendar.
-- "Who's free" faces on the calendar (needs an availability model).
+- Game invites agree a court and a time only. There is no booking, no payment split, and no
+  check that either player is already busy then. Cancelling or changing a confirmed game is not
+  built (planned above).
 - Change password, delete account, notification settings.
 - The level quiz result only changes the filter locally. It does not save to the profile.
-- `online` is always `false`. `freeTonight` and `wantsDoublesPartner` are stored flags until
-  availability exists.
+- `online` on a player listing is always `false`; the online dot comes from the socket (`presenceQueries`).
+- `freeTonight` and `wantsDoublesPartner` are stored flags until availability exists.
 - Ranking, tournaments news, court offers, payments and bookings do not exist yet.
+
+## No invented people
+
+Never put made-up players in the UI. The "who's free" faces, "Next games" and the home dashboard were
+removed for that reason. Bring them back only from real data: an availability model for who is free,
+and bookings for next games. Demo players exist only in development, as real `users` rows
+(`server/db/demoData.ts`).

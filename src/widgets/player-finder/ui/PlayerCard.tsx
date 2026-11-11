@@ -1,5 +1,5 @@
 import { formatRating, formatsLabel, initialsOf, type PlayerListing } from '@/entities/player';
-import { LetsPlayButton } from '@/features/inbox';
+import { LetsPlayButton, useIsOnline } from '@/features/inbox';
 import { Icon, ToggleItem, VisuallyHidden } from '@/shared/ui';
 import styles from './PlayerCard.module.css';
 
@@ -10,6 +10,8 @@ type PlayerCardProps = {
 };
 
 export function PlayerCard({ player, isSaved, onToggleSave }: PlayerCardProps) {
+  const isOnline = useIsOnline(player.id);
+
   return (
     <li className={styles.card}>
       <div className={styles.pic}>
@@ -40,7 +42,7 @@ export function PlayerCard({ player, isSaved, onToggleSave }: PlayerCardProps) {
           )}
         </div>
         <p className={styles.sub}>
-          {player.online && (
+          {isOnline && (
             <span className={styles.online}>
               <VisuallyHidden>Online now</VisuallyHidden>
             </span>

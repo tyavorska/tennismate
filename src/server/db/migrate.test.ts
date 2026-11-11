@@ -185,6 +185,135 @@ describe('migrate', () => {
     });
   });
 
+  describe('conversations', () => {
+    function databaseWithPlayers(): DatabaseSync {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 4));
+      database.exec(`
+        INSERT INTO users (id, email, password_hash, created_at)
+        VALUES ('u1', 'a@example.com', 'x', 'now'), ('u2', 'b@example.com', 'x', 'now');
+        INSERT INTO saved_players (user_id, player_id, created_at) VALUES ('u2', 'u1', 'now');
+      `);
+      return database;
+    }
+
+    it('adds the tables to a database that has rows, and keeps the rows', () => {
+      const database = databaseWithPlayers();
+
+      migrate(database);
+
+      expect(names(database, "sqlite_master WHERE type = 'table'")).toEqual(
+        expect.arrayContaining(['conversations', 'messages', 'conversation_members']),
+      );
+      expect(database.prepare('SELECT COUNT(*) AS total FROM users').get()?.total).toBe(2);
+      expect(database.prepare('SELECT COUNT(*) AS total FROM saved_players').get()?.total).toBe(1);
+      expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    });
+
+    it('allows one conversation per pair, with the smaller id first', () => {
+      const database = databaseWithPlayers();
+      migrate(database);
+      const insert = (a: string, b: string, id: string): void =>
+        database.exec(
+          `INSERT INTO conversations (id, user_a, user_b, created_at) VALUES ('${id}', '${a}', '${b}', 'now')`,
+        );
+
+      insert('u1', 'u2', 'c1');
+
+      expect(() => insert('u2', 'u1', 'c2')).toThrow();
+      expect(() => insert('u1', 'u2', 'c3')).toThrow();
+    });
+
+    it('refuses the same client message id twice from one sender in a conversation', () => {
+      const database = databaseWithPlayers();
+      migrate(database);
+      database.exec(
+        `INSERT INTO conversations (id, user_a, user_b, created_at) VALUES ('c1', 'u1', 'u2', 'now')`,
+      );
+      const send = (sender: string): void =>
+        database.exec(
+          `INSERT INTO messages (id, conversation_id, sender_id, client_message_id, body, created_at)
+           VALUES (lower(hex(randomblob(8))), 'c1', '${sender}', 'k1', 'hi', 'now')`,
+        );
+
+      send('u1');
+
+      expect(() => send('u1')).toThrow();
+      expect(() => send('u2')).not.toThrow();
+    });
+  });
+
+  describe('message invites', () => {
+    it('keeps the messages that exist and gives them no invite', () => {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 5));
+      database.exec(`
+        INSERT INTO users (id, email, password_hash, created_at)
+        VALUES ('u1', 'a@example.com', 'x', 'now'), ('u2', 'b@example.com', 'x', 'now');
+        INSERT INTO conversations (id, user_a, user_b, created_at) VALUES ('c1', 'u1', 'u2', 'now');
+        INSERT INTO messages (id, conversation_id, sender_id, client_message_id, body, created_at)
+        VALUES ('m1', 'c1', 'u1', 'k1', 'hi', 'now');
+      `);
+
+      migrate(database, migrations.slice(0, 6));
+
+      expect(
+        database.prepare('SELECT body, invite_court, invite_slot FROM messages').all(),
+      ).toEqual([expect.objectContaining({ body: 'hi', invite_court: null, invite_slot: null })]);
+      expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    });
+  });
+
+  describe('game invites', () => {
+    function databaseWithInviteMessage(): DatabaseSync {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 6));
+      database.exec(`
+        INSERT INTO users (id, email, password_hash, created_at)
+        VALUES ('u1', 'a@example.com', 'x', 'now'), ('u2', 'b@example.com', 'x', 'now');
+        INSERT INTO conversations (id, user_a, user_b, created_at) VALUES ('c1', 'u1', 'u2', 'now');
+        INSERT INTO messages
+          (id, conversation_id, sender_id, client_message_id, body, invite_court, invite_slot, created_at)
+        VALUES ('m1', 'c1', 'u1', 'k1', 'Play?', 'Park', 'Tomorrow 10:00', 'now'),
+               ('m2', 'c1', 'u2', 'k2', 'Sure', NULL, NULL, 'now');
+      `);
+      return database;
+    }
+
+    it('keeps the messages, and drops the old court and slot columns', () => {
+      const database = databaseWithInviteMessage();
+
+      migrate(database);
+
+      expect(database.prepare('SELECT id, body FROM messages ORDER BY rowid').all()).toEqual([
+        expect.objectContaining({ id: 'm1', body: 'Play?' }),
+        expect.objectContaining({ id: 'm2', body: 'Sure' }),
+      ]);
+      expect(names(database, "pragma_table_info('messages')")).not.toContain('invite_court');
+      expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    });
+
+    it('allows one invite per message and only known statuses', () => {
+      const database = databaseWithInviteMessage();
+      migrate(database);
+      const district = `INSERT INTO districts (city_id, name, latitude, longitude) VALUES (1, 'D', 0, 0)`;
+      database.exec(district);
+      database.exec(
+        `INSERT INTO courts (city_id, district_id, name) VALUES (1, (SELECT id FROM districts WHERE name = 'D'), 'C')`,
+      );
+      const invite = (id: string, status: string): void =>
+        database.exec(
+          `INSERT INTO game_invites (id, message_id, conversation_id, proposer_id, invitee_id, court_id, starts_at, status, created_at)
+           VALUES ('${id}', 'm1', 'c1', 'u1', 'u2', 1, '2026-11-12T09:00:00.000Z', '${status}', 'now')`,
+        );
+
+      invite('i1', 'pending');
+
+      expect(() => invite('i2', 'pending')).toThrow();
+      expect(() => database.exec(`UPDATE game_invites SET status = 'maybe'`)).toThrow();
+    });
+  });
+
   describe('when a migration fails', () => {
     const failing: Migration = {
       version: 2,

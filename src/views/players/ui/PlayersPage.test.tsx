@@ -1,4 +1,4 @@
-import { sampleConversations } from '@/entities/conversation';
+import { conversationQueries, conversationSchema } from '@/entities/conversation';
 import {
   ntrpRatingSchema,
   openGameQueries,
@@ -7,7 +7,7 @@ import {
   playerQueries,
 } from '@/entities/player';
 import { InboxProvider } from '@/features/inbox';
-import { createTestQueryClient, renderWithQuery } from '@/shared/testing';
+import { createTestQueryClient, renderWithQuery, TestRealtime } from '@/shared/testing';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -64,14 +64,44 @@ const games = ['Piotr W.', 'Ola N.', 'Kuba S.'].map((host, index) =>
   }),
 );
 
+function uuid(n: number): string {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
+const viewerId = uuid(1);
+
+const conversations = ['Ola N.', 'Piotr W.', 'Kuba S.', 'Marta K.'].map((name, index) =>
+  conversationSchema.parse({
+    id: uuid(100 + index),
+    partner: {
+      id: uuid(200 + index),
+      name,
+      initials: name.slice(0, 2).toUpperCase(),
+      subtitle: 'NTRP 3.5 · Kazimierz',
+    },
+    lastMessage: {
+      id: uuid(300 + index),
+      conversationId: uuid(100 + index),
+      senderId: uuid(200 + index),
+      clientMessageId: uuid(400 + index),
+      text: `Message from ${name}`,
+      sentAt: '2026-11-04T09:00:00.000Z',
+    },
+    unreadCount: index === 0 ? 1 : 0,
+  }),
+);
+
 function renderPage(): void {
   const client = createTestQueryClient();
   client.setQueryData(openGameQueries.list().queryKey, games);
   client.setQueryData(playerQueries.saved().queryKey, []);
+  client.setQueryData(conversationQueries.list().queryKey, conversations);
   renderWithQuery(
-    <InboxProvider conversations={sampleConversations}>
-      <PlayersPage players={players} courts={courts} viewerRating={ntrpRatingSchema.parse(3.5)} />
-    </InboxProvider>,
+    <TestRealtime>
+      <InboxProvider viewer={{ id: viewerId, timezone: 'Europe/Warsaw' }}>
+        <PlayersPage players={players} courts={courts} viewerRating={ntrpRatingSchema.parse(3.5)} />
+      </InboxProvider>
+    </TestRealtime>,
     client,
   );
 }
@@ -112,26 +142,12 @@ describe('PlayersPage', () => {
     expect(within(games).getAllByRole('button', { name: /Join game/ })).toHaveLength(3);
   });
 
-  it('shows the inbox and the next games', () => {
+  it('shows the inbox', () => {
     renderPage();
 
     const inbox = screen.getByRole('region', { name: 'Inbox' });
     expect(within(inbox).getAllByRole('listitem')).toHaveLength(4);
     expect(within(inbox).getByText('Unread')).toBeInTheDocument();
-    const next = screen.getByRole('region', { name: 'Next games' });
-    expect(within(next).getByText('vs Piotr W.')).toBeInTheDocument();
-  });
-
-  describe('next games', () => {
-    it('links each game to its day in the calendar', () => {
-      renderPage();
-
-      const next = screen.getByRole('region', { name: 'Next games' });
-      expect(within(next).getByRole('link', { name: /vs Ola N\./ })).toHaveAttribute(
-        'href',
-        '/calendar?day=2026-11-04',
-      );
-    });
   });
 
   describe('inbox panel', () => {

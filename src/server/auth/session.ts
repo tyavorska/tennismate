@@ -1,18 +1,14 @@
 import 'server-only';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
-import { userSchema, type User, type UserId } from '@/entities/user';
+import type { User, UserId } from '@/entities/user';
 import { sessionCookieName } from '@/shared/config';
 import { serverEnv } from '../config/env';
 import { db } from '../db/db';
+import { findUserBySessionToken, hashToken } from './sessionToken';
 
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
-
-// Only the hash is stored, so a leaked database cannot be used to sign in.
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 export async function createSession(userId: UserId): Promise<void> {
   const token = randomBytes(32).toString('base64url');
@@ -38,15 +34,7 @@ export const getCurrentUser = cache(async (): Promise<User | undefined> => {
   const token = (await cookies()).get(sessionCookieName)?.value;
   if (token === undefined) return undefined;
 
-  const row = db
-    .prepare(
-      `SELECT users.id, users.email FROM sessions
-       JOIN users ON users.id = sessions.user_id
-       WHERE sessions.token_hash = ? AND sessions.expires_at > ?`,
-    )
-    .get(hashToken(token), new Date().toISOString());
-
-  return row && userSchema.parse(row);
+  return findUserBySessionToken(token);
 });
 
 export async function deleteSession(): Promise<void> {

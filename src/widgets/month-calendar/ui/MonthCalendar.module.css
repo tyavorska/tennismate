@@ -191,50 +191,6 @@
   opacity: 0.6;
 }
 
-.free {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: auto;
-}
-
-.faces {
-  display: flex;
-}
-
-.face {
-  width: 1.125rem;
-  height: 1.125rem;
-  border-radius: 50%;
-  box-shadow: 0 0 0 0.09375rem var(--background);
-}
-
-.day[data-selected] .face {
-  box-shadow: 0 0 0 0.09375rem var(--accent);
-}
-
-.face + .face {
-  margin-left: -0.4375rem;
-}
-
-.toneOne {
-  background: var(--tag-bg);
-}
-
-.toneTwo {
-  background: var(--peri);
-}
-
-.toneThree {
-  background: var(--muted);
-}
-
-.more {
-  font-size: 0.625rem;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
 .legend {
   display: flex;
   flex-wrap: wrap;

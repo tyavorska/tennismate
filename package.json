@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "realtime": "tsx --tsconfig scripts/tsconfig.realtime.json scripts/realtime.ts",
+    "realtime:dev": "tsx watch --tsconfig scripts/tsconfig.realtime.json scripts/realtime.ts",
     "lint": "eslint && stylelint \"src/**/*.css\"",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
@@ -25,6 +27,8 @@
     "react-dom": "19.2.8",
     "react-hook-form": "^7.91.0",
     "server-only": "^0.0.1",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {

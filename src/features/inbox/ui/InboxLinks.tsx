@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { ChatPartner } from '@/entities/conversation';
 import { Button } from '@/shared/ui';
-import type { ChatPlayer } from '../model/useInbox';
 import { useInboxControls } from './InboxProvider';
 import styles from './InboxLinks.module.css';
 
@@ -26,7 +26,7 @@ export function OpenInboxButton({ className }: OpenInboxButtonProps) {
 }
 
 type LetsPlayButtonProps = {
-  player: ChatPlayer;
+  player: ChatPartner;
   className?: string;
 };
 
@@ -47,20 +47,20 @@ export function LetsPlayButton({ player, className }: LetsPlayButtonProps) {
 }
 
 type OpenChatButtonProps = {
-  conversationId: string;
+  partner: ChatPartner;
   className?: string;
   children: ReactNode;
 };
 
 /** Wraps a row, such as an inbox item, so that pressing it opens the chat with that player. */
-export function OpenChatButton({ conversationId, className, children }: OpenChatButtonProps) {
+export function OpenChatButton({ partner, className, children }: OpenChatButtonProps) {
   const { open } = useInboxControls();
 
   return (
     <Button
       variant="ghost"
       className={[styles.chat, className].filter(Boolean).join(' ')}
-      onPress={() => open({ conversationId })}
+      onPress={() => open({ player: partner })}
     >
       {children}
     </Button>

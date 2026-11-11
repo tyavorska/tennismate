@@ -1,22 +1,23 @@
 'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { unreadCount, type Conversation } from '@/entities/conversation';
+import { unreadConversations, type ChatPartner } from '@/entities/conversation';
 import { Drawer } from '@/shared/ui';
-import { useInbox, type ChatPlayer } from '../model/useInbox';
+import { useConversations } from '../model/useConversations';
+import { useInboxEvents } from '../model/useInboxEvents';
 import { InboxPanel } from './InboxPanel';
 
 type OpenOptions = {
-  /** Opens this conversation instead of the list. */
-  conversationId?: string;
-  /** Opens the chat with this player, starting one if there is none yet. */
-  player?: ChatPlayer;
+  /** Opens the chat with this player. A conversation exists only after the first message. */
+  player?: ChatPartner;
   /** Also opens the "let's play" invite form. */
   invite?: boolean;
 };
 
 type InboxControls = {
   unread: number;
+  /** The signed-in player's city time zone, for the times shown in the lists. */
+  timezone: string;
   open: (options?: OpenOptions) => void;
 };
 
@@ -29,43 +30,48 @@ export function useInboxControls(): InboxControls {
 }
 
 type InboxProviderProps = {
-  conversations: readonly Conversation[];
+  /** The signed-in player: whose messages are "mine", and the time zone times are shown in. */
+  viewer: Readonly<{ id: string; timezone: string }>;
   children: ReactNode;
 };
 
-/** Holds the conversations and the drawer, so any button on the page can open the inbox. */
-export function InboxProvider({ conversations, children }: InboxProviderProps) {
-  const inbox = useInbox(conversations);
+/** Holds the drawer and listens for live messages, so any button on the page can open the inbox. */
+export function InboxProvider({ viewer, children }: InboxProviderProps) {
+  useInboxEvents();
+  const conversations = useConversations();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string | undefined>(undefined);
+  const [active, setActive] = useState<ChatPartner | undefined>(undefined);
   const [isInviting, setIsInviting] = useState(false);
 
   function open(options: OpenOptions = {}): void {
-    if (options.player !== undefined) inbox.ensure(options.player);
-    const id = options.player?.id ?? options.conversationId;
-    if (id !== undefined) inbox.markRead(id);
-    setActiveId(id);
+    setActive(options.player);
     setIsInviting(options.invite ?? false);
     setIsOpen(true);
   }
 
   return (
-    <InboxContext value={{ unread: unreadCount(inbox.conversations), open }}>
+    <InboxContext
+      value={{
+        unread: unreadConversations(conversations.data ?? []),
+        timezone: viewer.timezone,
+        open,
+      }}
+    >
       {children}
       <Drawer isOpen={isOpen} onOpenChange={setIsOpen} label="Messages">
         {(close) => (
           <InboxPanel
-            inbox={inbox}
-            activeId={activeId}
+            viewer={viewer}
+            conversations={conversations}
+            active={active}
             isInviting={isInviting}
             onInvitingChange={setIsInviting}
-            onOpenConversation={(id) => {
-              inbox.markRead(id);
-              setActiveId(id);
+            onOpenConversation={(partner) => {
+              setActive(partner);
               setIsInviting(false);
             }}
             onBack={() => {
-              setActiveId(undefined);
+              setActive(undefined);
               setIsInviting(false);
             }}
             onClose={close}

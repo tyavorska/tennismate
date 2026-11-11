@@ -2,29 +2,23 @@
 
 import { useState, type ReactNode } from 'react';
 import { Label, TextArea, TextField } from 'react-aria-components';
-import { LetsPlayButton } from '@/features/inbox';
 import { toggleMember } from '@/shared/lib';
 import { Avatar, Button, ButtonLink } from '@/shared/ui';
 import {
   describeDay,
   eventsOn,
   formatDay,
-  freeOn,
   plural,
   type CalendarEvent,
-  type FreePlayer,
   type IsoDate,
 } from '../model/calendar';
 import styles from './DayPanel.module.css';
-
-const freeListLimit = 4;
 
 type DayPanelProps = {
   iso: IsoDate;
   todayIso: IsoDate;
   events: readonly CalendarEvent[];
   upcomingTournaments: readonly CalendarEvent[];
-  freePlayers: readonly FreePlayer[];
   note: string;
   onNoteChange: (note: string) => void;
 };
@@ -76,7 +70,6 @@ export function DayPanel({
   todayIso,
   events,
   upcomingTournaments,
-  freePlayers,
   note,
   onNoteChange,
 }: DayPanelProps) {
@@ -84,7 +77,6 @@ export function DayPanel({
   const dayEvents = eventsOn(events, iso);
   const bookings = dayEvents.filter((event) => event.kind === 'game');
   const openGames = dayEvents.filter((event) => event.kind === 'open');
-  const free = freeOn(freePlayers, iso, todayIso);
   const isPast = iso < todayIso;
 
   return (
@@ -94,7 +86,6 @@ export function DayPanel({
         <h2 className={styles.date}>{formatDay(iso)}</h2>
         <p className={styles.summary}>
           {plural(bookings.length, 'booking', 'bookings')} ·{' '}
-          {plural(free.length, 'player', 'players')} free ·{' '}
           {plural(openGames.length, 'open game', 'open games')}
         </p>
       </div>
@@ -153,38 +144,6 @@ export function DayPanel({
           </ul>
         </Block>
       )}
-
-      <Block title="Free to play" count={free.length}>
-        {isPast && <p className={styles.empty}>This day has passed.</p>}
-        {!isPast && free.length === 0 && (
-          <p className={styles.empty}>No one has marked this day yet.</p>
-        )}
-        {free.length > 0 && (
-          <ul className={styles.rows}>
-            {free.slice(0, freeListLimit).map((player) => (
-              <Row
-                key={player.id}
-                initials={player.initials}
-                title={`${player.name} · ${player.rating.toFixed(1)}`}
-                subtitle={`${player.window} · ${player.district}`}
-                action={
-                  <LetsPlayButton
-                    player={{
-                      id: player.id,
-                      name: player.name,
-                      initials: player.initials,
-                      subtitle: `NTRP ${player.rating.toFixed(1)} · ${player.district}`,
-                    }}
-                  />
-                }
-              />
-            ))}
-          </ul>
-        )}
-        {free.length > freeListLimit && (
-          <p className={styles.empty}>+{free.length - freeListLimit} more</p>
-        )}
-      </Block>
 
       <TextField value={note} onChange={onNoteChange} className={styles.block}>
         <Label className={styles.blockHead}>My note</Label>

@@ -31,15 +31,3 @@ export const calendarEventSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 export type CalendarEvent = Readonly<z.infer<typeof calendarEventSchema>>;
-
-/** Weekdays are 0 (Monday) to 6 (Sunday). */
-export const freePlayerSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  initials: z.string().min(1),
-  rating: z.number(),
-  window: z.string().min(1),
-  district: z.string().min(1),
-  weekdays: z.array(z.number().int().min(0).max(6)).readonly(),
-});
-export type FreePlayer = Readonly<z.infer<typeof freePlayerSchema>>;

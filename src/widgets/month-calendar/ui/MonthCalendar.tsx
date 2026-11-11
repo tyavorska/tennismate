@@ -8,13 +8,11 @@ import {
   buildDays,
   eventsOn,
   formatDay,
-  freeOn,
   isoDateSchema,
   plural,
   rangeTitle,
   type CalendarDay,
   type CalendarEvent,
-  type FreePlayer,
   type IsoDate,
   visibleRange,
   weekOffsetFor,
@@ -29,22 +27,14 @@ const legend = [
   { label: 'Tournament', className: styles.swatchTournament },
   { label: 'Open game', className: styles.swatchOpen },
 ] as const;
-const faceTones = [styles.toneOne, styles.toneTwo, styles.toneThree] as const;
-const facesShown = 3;
 
 type MonthCalendarProps = {
   todayIso: IsoDate;
-  freePlayers: readonly FreePlayer[];
   /** The day to select on arrival, such as when a game was opened from a list. Today when absent. */
   initialDay?: IsoDate;
 };
 
-function dayLabel(
-  day: CalendarDay,
-  events: readonly CalendarEvent[],
-  free: number,
-  hasNote: boolean,
-): string {
+function dayLabel(day: CalendarDay, events: readonly CalendarEvent[], hasNote: boolean): string {
   const parts = events.map((event) => {
     if (event.kind === 'game') {
       return `${event.time} ${event.title}${event.confirmed ? '' : ', waiting for reply'}`;
@@ -52,7 +42,6 @@ function dayLabel(
     if (event.kind === 'tournament') return `tournament ${event.name}`;
     return `open game at ${event.time}`;
   });
-  if (free > 0) parts.push(`${plural(free, 'player', 'players')} free`);
   if (hasNote) parts.push('note');
   const when = `${formatDay(day.iso)}${day.isToday ? ', today' : ''}`;
   return parts.length === 0 ? when : `${when}: ${parts.join('; ')}`;
@@ -100,7 +89,7 @@ function EventChips({ events, hasNote }: EventChipsProps) {
   );
 }
 
-export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalendarProps) {
+export function MonthCalendar({ todayIso, initialDay }: MonthCalendarProps) {
   const [weekOffset, setWeekOffset] = useState(() =>
     initialDay === undefined ? 0 : weekOffsetFor(todayIso, initialDay),
   );
@@ -192,7 +181,6 @@ export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalend
         >
           {days.map((day) => {
             const dayEvents = eventsOn(events, day.iso);
-            const free = freeOn(freePlayers, day.iso, todayIso);
             const hasNote = (notes[day.iso] ?? '').trim() !== '';
             const classes = [
               styles.day,
@@ -206,7 +194,7 @@ export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalend
                 key={day.iso}
                 id={day.iso}
                 className={classes}
-                aria-label={dayLabel(day, dayEvents, free.length, hasNote)}
+                aria-label={dayLabel(day, dayEvents, hasNote)}
               >
                 <span className={styles.number}>
                   <span className={styles.numeral}>{day.dayOfMonth}</span>
@@ -215,21 +203,6 @@ export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalend
                   )}
                 </span>
                 <EventChips events={dayEvents} hasNote={hasNote} />
-                {free.length > 0 && (
-                  <span className={styles.free}>
-                    <span className={styles.faces}>
-                      {free.slice(0, facesShown).map((player, index) => (
-                        <span
-                          key={player.id}
-                          className={`${styles.face} ${faceTones[index % faceTones.length]}`}
-                        />
-                      ))}
-                    </span>
-                    {free.length > facesShown && (
-                      <span className={styles.more}>+{free.length - facesShown}</span>
-                    )}
-                  </span>
-                )}
               </ToggleItem>
             );
           })}
@@ -242,7 +215,6 @@ export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalend
               {item.label}
             </li>
           ))}
-          <li>Faces = free to play</li>
         </ul>
       </section>
 
@@ -251,7 +223,6 @@ export function MonthCalendar({ todayIso, freePlayers, initialDay }: MonthCalend
         todayIso={todayIso}
         events={events}
         upcomingTournaments={upcomingTournaments}
-        freePlayers={freePlayers}
         note={notes[selectedIso] ?? ''}
         onNoteChange={(note) => setNotes({ ...notes, [selectedIso]: note })}
       />

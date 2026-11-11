@@ -9,7 +9,7 @@ import { seedDemoData, seedReferenceData } from './seed';
 function openDatabase(path: string): DatabaseSync {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const database = new DatabaseSync(path);
-  database.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  database.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   return database;
 }
 

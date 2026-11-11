@@ -311,3 +311,10 @@
 .sendError {
   padding: 0 var(--space-4) var(--space-2);
 }
+
+.retrying {
+  padding: 0 var(--space-4) var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}

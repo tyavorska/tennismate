@@ -7,6 +7,7 @@ import { playerSchema } from '@/entities/player';
 import {
   applyMessageNew,
   conversationQueries,
+  registerConversationMutations,
   conversationSchema,
   inviteResponseRequestSchema,
   messageSchema,
@@ -585,6 +586,67 @@ describe('AppShell', () => {
           'Something went wrong on our side',
         );
         expect(within(drawer).getByRole('button', { name: /Ola N\./ })).toBeInTheDocument();
+      });
+
+      function renderWithRetries(): void {
+        const client = createTestQueryClient();
+        registerConversationMutations(client, { retryDelay: () => 0 });
+        renderShell(client);
+      }
+
+      it('tries again on its own after a timeout, with the same id, and shows no error when it works', async () => {
+        onSend.mockImplementationOnce((_payload, _acknowledge, timeOut) => timeOut());
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByText('See you at 10', { selector: 'p' })).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledTimes(2);
+        const [first, second] = onSend.mock.calls.map(([payload]) => payload);
+        expect(second.clientMessageId).toBe(first.clientMessageId);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+
+      it('tries again after a rate limit', async () => {
+        onSend.mockImplementationOnce((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'rateLimited', retryAfterSeconds: 3 } }),
+        );
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByText('See you at 10', { selector: 'p' })).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledTimes(2);
+      });
+
+      it('gives up after three attempts, keeps the text and offers to send again', async () => {
+        onSend.mockImplementation((_payload, _acknowledge, timeOut) => timeOut());
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent("We couldn't reach the server");
+        expect(onSend).toHaveBeenCalledTimes(3);
+        expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+        expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+      });
+
+      it('does not try again when the problem will not go away by itself', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'notFound' } }),
+        );
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('no longer exists');
+        expect(onSend).toHaveBeenCalledTimes(1);
       });
 
       it('says the server could not be reached, and keeps the text, when no answer comes', async () => {

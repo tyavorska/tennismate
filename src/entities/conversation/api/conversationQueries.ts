@@ -17,6 +17,12 @@ export const conversationQueries = {
     }),
 };
 
+/** Names the writes, so one place can say how they are retried and logs can tell them apart. */
+export const conversationMutationKeys = {
+  send: ['conversations', 'send'] as const,
+  respondToInvite: ['conversations', 'respond-to-invite'] as const,
+};
+
 const nobodyOnline: readonly string[] = [];
 
 /** Who is online. Filled by the socket, never fetched. */

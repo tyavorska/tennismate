@@ -39,7 +39,12 @@ export type {
   ServerToClientEvents,
 } from './model/events';
 export { conversationApi } from './api/conversationApi';
-export { conversationQueries, presenceQueries } from './api/conversationQueries';
+export {
+  conversationMutationKeys,
+  conversationQueries,
+  presenceQueries,
+} from './api/conversationQueries';
+export { registerConversationMutations } from './lib/mutations';
 export { formatInviteDay, formatListTime, formatMessageTime } from './lib/format';
 export {
   applyMessageNew,

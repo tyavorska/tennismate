@@ -2,28 +2,21 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { errorPolicy, toApiError } from '@/shared/api';
+import { registerConversationMutations } from '@/entities/conversation';
+import { retryDelay, shouldRetry } from '@/shared/api';
 
-const maxAttempts = 3;
 // Lets data handed over from the server render count as fresh instead of refetching at once.
 const staleTimeMs = 30_000;
 
-function shouldRetry(failureCount: number, error: Error): boolean {
-  return failureCount < maxAttempts && errorPolicy[toApiError(error).kind].retryable;
-}
-
-function retryDelay(attempt: number, error: Error): number {
-  const retryAfterSeconds = toApiError(error).retryAfterSeconds;
-  return retryAfterSeconds === undefined ? 1000 * 2 ** attempt : retryAfterSeconds * 1000;
-}
-
 function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: shouldRetry, retryDelay, staleTime: staleTimeMs },
       mutations: { retry: false },
     },
   });
+  registerConversationMutations(queryClient);
+  return queryClient;
 }
 
 export function QueryProvider({ children }: { children: ReactNode }) {

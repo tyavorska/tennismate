@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import {
   applyMessageNew,
   conversationEvents,
+  conversationMutationKeys,
   type MessageNewEvent,
   type SendMessageRequest,
 } from '@/entities/conversation';
@@ -14,6 +15,7 @@ export function useSendMessage(): UseMutationResult<MessageNewEvent, ApiError, S
   const queryClient = useQueryClient();
 
   return useMutation<MessageNewEvent, ApiError, SendMessageRequest>({
+    mutationKey: conversationMutationKeys.send,
     mutationFn: (request) => emitWithAck(socket, conversationEvents.send, request),
     onSuccess: (event) => applyMessageNew(queryClient, event),
   });

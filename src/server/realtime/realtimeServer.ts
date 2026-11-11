@@ -77,8 +77,12 @@ export function createRealtimeServer(
     if (typeof acknowledge !== 'function') return;
     const { user } = socket.data;
 
-    if (!sendLimit.check(user.id).allowed) {
-      acknowledge({ ok: false, problem: { kind: 'rateLimited' } });
+    const limit = sendLimit.check(user.id);
+    if (!limit.allowed) {
+      acknowledge({
+        ok: false,
+        problem: { kind: 'rateLimited', retryAfterSeconds: limit.retryAfterSeconds },
+      });
       return;
     }
     const parsed = schema.safeParse(payload);

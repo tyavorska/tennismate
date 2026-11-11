@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import {
   applyMessageNew,
   conversationEvents,
+  conversationMutationKeys,
   type InviteResponseRequest,
   type MessageNewEvent,
 } from '@/entities/conversation';
@@ -20,6 +21,7 @@ export function useRespondToInvite(): UseMutationResult<
   const queryClient = useQueryClient();
 
   return useMutation<MessageNewEvent, ApiError, InviteResponseRequest>({
+    mutationKey: conversationMutationKeys.respondToInvite,
     mutationFn: (request) => emitWithAck(socket, conversationEvents.respondToInvite, request),
     onSuccess: (event) => {
       applyMessageNew(queryClient, event);

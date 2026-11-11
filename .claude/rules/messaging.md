@@ -89,10 +89,14 @@ event. How it applies here:
 - **A failed event answers on the acknowledgement** with a `Problem`. An unexpected error gets a
   `requestId`, a log line with kind, operation, status, request id and time (`server/realtime/problem.ts`),
   and no internals in the answer. A `DomainError` is expected and is not logged.
-- **Not built yet:** automatic retry of a send on `network` or `unavailable` (the id makes it safe),
-  waiting out `rateLimited` (the limiter knows the seconds, the `Problem` has no field for them), a
-  `Toast` for a failed mark-as-read, and one global handler that redirects a REST call answered 401. That one needs care, because
-  sign-in answers a wrong password with `unauthenticated`.
+- **Sends and invite answers retry on their own**, because repeating them is safe (the
+  `clientMessageId`; an answer given twice changes nothing). On `network`, `unavailable` and
+  `rateLimited` they are tried 3 times in all, after 1 s and 2 s, or after the `retryAfterSeconds`
+  the server sent with a rate limit. The thread says "Trying again…" meanwhile. The rule lives in
+  `registerConversationMutations`, which `QueryProvider` calls. Other writes do not retry.
+- **Not built yet:** a `Toast` for a failed mark-as-read, and one global handler that redirects a
+  REST call answered 401. That one needs care, because sign-in answers a wrong password with
+  `unauthenticated`.
 
 ## Rules
 
@@ -100,7 +104,8 @@ event. How it applies here:
   and a subtitle.
 - A change to the messages tables goes in a new migration. Test it from the previous schema.
 - Server tests cover the failure branches: a stranger, another city, a repeated send, a bad cursor.
-- UI tests cover each failure kind of a send, a failed first load, a failed refresh, and pressing Send
+- UI tests cover each failure kind of a send, the retries (works on the second try, gives up after
+  three, no retry for a missing item), a failed first load, a failed refresh, and pressing Send
   twice (`references/testing.md` of the skill has the full list).
 - The socket integration test (`server/realtime/realtimeServer.test.ts`) must pass before merging
   a change to events or presence.

@@ -392,6 +392,12 @@ function Thread({
         ))}
       </ul>
 
+      {((send.isPending && send.failureCount > 0) ||
+        (respond.isPending && respond.failureCount > 0)) && (
+        <p role="status" className={styles.retrying}>
+          Trying again…
+        </p>
+      )}
       {send.error !== null && (
         <div className={styles.sendError}>
           <FormAlert referenceId={send.error.requestId}>

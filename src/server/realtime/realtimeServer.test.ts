@@ -158,6 +158,22 @@ describe('instant messages', () => {
     expect(ack).toMatchObject({ ok: false, problem: { kind: 'notFound' } });
   });
 
+  it('tells the sender how long to wait when they send too fast', async () => {
+    const ana = await createPlayer(email('ana'));
+    const ben = await createPlayer(email('ben'));
+    const socket = await connectAs(ana);
+
+    const acks = [];
+    for (let sent = 0; sent < 21; sent++)
+      acks.push(await sendAndAwait(socket, request(ben, `m${sent}`)));
+
+    expect(acks.slice(0, 20).every((ack) => ack.ok)).toBe(true);
+    expect(acks[20]).toMatchObject({
+      ok: false,
+      problem: { kind: 'rateLimited', retryAfterSeconds: expect.any(Number) },
+    });
+  });
+
   it('ignores a send without an acknowledgement callback', async () => {
     const ana = await createPlayer(email('ana'));
     const ben = await createPlayer(email('ben'));

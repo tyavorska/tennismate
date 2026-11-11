@@ -61,6 +61,8 @@ export const problemSchema = z.object({
   message: z.string().optional(),
   fieldErrors: z.record(z.string(), z.string()).optional(),
   requestId: z.string().optional(),
+  /** How long to wait before repeating, for a rate limit. */
+  retryAfterSeconds: z.number().positive().optional(),
 });
 
 export type Problem = z.infer<typeof problemSchema>;
@@ -77,7 +79,7 @@ export class ApiError extends Error {
     this.kind = problem.kind;
     this.fieldErrors = problem.fieldErrors ?? {};
     this.requestId = problem.requestId;
-    this.retryAfterSeconds = retryAfterSeconds;
+    this.retryAfterSeconds = retryAfterSeconds ?? problem.retryAfterSeconds;
   }
 }
 

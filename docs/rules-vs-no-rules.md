@@ -95,8 +95,9 @@ for), a failed send keeps its text, submit is disabled while pending, expected f
 errors with the shared `Problem` shape, and nothing internal leaks to the client.
 
 These were fixed afterwards (`ErrorState` and `Banner` added to `shared/ui`, handshake handling,
-request ids, 24 new tests). Still open: automatic retry for sends, waiting out `rateLimited`, a
-`Toast` for a failed mark-as-read, and a global handler for expired sessions in `QueryProvider`.
+request ids, 24 new tests). A second pass added automatic retry for sends and invite answers, and
+waiting out `rateLimited` with the seconds the server sends. Still open: a `Toast` for a failed
+mark-as-read, and a global handler for expired sessions in `QueryProvider`.
 That last one needs care: sign-in answers a wrong password with `unauthenticated`, so a blanket
 redirect would loop.
 

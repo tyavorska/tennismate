@@ -7,6 +7,7 @@ import { playerSchema } from '@/entities/player';
 import {
   applyMessageNew,
   conversationQueries,
+  registerConversationMutations,
   conversationSchema,
   inviteResponseRequestSchema,
   messageSchema,
@@ -99,6 +100,8 @@ const courts = [
 ];
 
 let markedRead: string[] = [];
+let failingUrls: string[] = [];
+const requestId = '3f9c2a71-5d0e-4b8a-9c11-0a2b3c4d5e6f';
 const onSend = vi.fn();
 
 function installFakeApi(): void {
@@ -106,6 +109,11 @@ function installFakeApi(): void {
     'fetch',
     vi.fn((input: string, init?: { method?: string }) => {
       const json = (body: z.core.util.JSONType): Response => new Response(JSON.stringify(body));
+      if (failingUrls.includes(input)) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ kind: 'server', requestId }), { status: 500 }),
+        );
+      }
       if (input === '/api/conversations') return Promise.resolve(json([ola, piotr]));
       if (init?.method === 'PUT') {
         markedRead.push(input);
@@ -220,6 +228,7 @@ beforeEach(() => {
   router.replace.mockReset();
   router.refresh.mockReset();
   markedRead = [];
+  failingUrls = [];
   onSend.mockReset();
   installFakeApi();
 });
@@ -328,6 +337,7 @@ describe('AppShell', () => {
       expect(onSend).toHaveBeenCalledWith(
         expect.objectContaining({ recipientId: ola.partner.id, text: 'See you at 10' }),
         expect.any(Function),
+        expect.any(Function),
       );
     });
 
@@ -362,6 +372,7 @@ describe('AppShell', () => {
             },
           }),
           expect.any(Function),
+          expect.any(Function),
         );
         expect(screen.queryByRole('form', { name: 'Propose a court' })).not.toBeInTheDocument();
       });
@@ -379,6 +390,7 @@ describe('AppShell', () => {
         expect(await screen.findByText('Cancelled')).toBeInTheDocument();
         expect(onSend).toHaveBeenLastCalledWith(
           { inviteId: sentInviteId, action: 'cancel' },
+          expect.any(Function),
           expect.any(Function),
         );
       });
@@ -412,6 +424,7 @@ describe('AppShell', () => {
         expect(screen.getByText('Sat 14 Nov · 10:00 · Park Jordana')).toBeInTheDocument();
         expect(onSend).toHaveBeenCalledWith(
           { inviteId: piotrInvite.invite?.id, action: 'accept' },
+          expect.any(Function),
           expect.any(Function),
         );
         expect(invalidate).toHaveBeenCalledWith(calendarQueries.all());
@@ -514,6 +527,188 @@ describe('AppShell', () => {
 
       expect(await screen.findByRole('alert')).toHaveTextContent('temporarily unavailable');
       expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+    });
+
+    describe('when something fails', () => {
+      async function openOla(): Promise<ReturnType<typeof userEvent.setup>> {
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
+        await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
+        await screen.findByText('Are we still on for Saturday?');
+        await user.type(screen.getByRole('textbox', { name: 'Message' }), 'See you at 10');
+        return user;
+      }
+
+      async function failedSend(): Promise<void> {
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Send' }));
+      }
+
+      it('shows an error with a reference, not an empty inbox, when the list cannot load', async () => {
+        failingUrls = ['/api/conversations'];
+        renderShell();
+        const user = userEvent.setup();
+
+        await user.click(screen.getByRole('button', { name: /Messages/ }));
+
+        const drawer = screen.getByRole('dialog', { name: 'Messages' });
+        expect(await within(drawer).findByText('Your messages did not load')).toBeInTheDocument();
+        expect(within(drawer).getByText(/Something went wrong on our side/)).toBeInTheDocument();
+        expect(within(drawer).getByText('Reference: 3f9c2a71')).toBeInTheDocument();
+        expect(within(drawer).queryByText(/No messages yet/)).not.toBeInTheDocument();
+      });
+
+      it('loads the list when the player presses Try again', async () => {
+        failingUrls = ['/api/conversations'];
+        renderShell();
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /Messages/ }));
+        await screen.findByText('Your messages did not load');
+
+        failingUrls = [];
+        await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+        expect(await screen.findByRole('button', { name: /Ola N\./ })).toBeInTheDocument();
+        expect(screen.queryByText('Your messages did not load')).not.toBeInTheDocument();
+      });
+
+      it('keeps the conversations and shows a notice when a refresh fails', async () => {
+        const client = createTestQueryClient();
+        client.setQueryData(conversationQueries.list().queryKey, [ola, piotr]);
+        renderShell(client);
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /Messages/ }));
+        failingUrls = ['/api/conversations'];
+
+        await act(() => client.invalidateQueries(conversationQueries.list()));
+
+        const drawer = screen.getByRole('dialog', { name: 'Messages' });
+        expect(await within(drawer).findByRole('status')).toHaveTextContent(
+          'Something went wrong on our side',
+        );
+        expect(within(drawer).getByRole('button', { name: /Ola N\./ })).toBeInTheDocument();
+      });
+
+      function renderWithRetries(): void {
+        const client = createTestQueryClient();
+        registerConversationMutations(client, { retryDelay: () => 0 });
+        renderShell(client);
+      }
+
+      it('tries again on its own after a timeout, with the same id, and shows no error when it works', async () => {
+        onSend.mockImplementationOnce((_payload, _acknowledge, timeOut) => timeOut());
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByText('See you at 10', { selector: 'p' })).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledTimes(2);
+        const [first, second] = onSend.mock.calls.map(([payload]) => payload);
+        expect(second.clientMessageId).toBe(first.clientMessageId);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+
+      it('tries again after a rate limit', async () => {
+        onSend.mockImplementationOnce((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'rateLimited', retryAfterSeconds: 3 } }),
+        );
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByText('See you at 10', { selector: 'p' })).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledTimes(2);
+      });
+
+      it('gives up after three attempts, keeps the text and offers to send again', async () => {
+        onSend.mockImplementation((_payload, _acknowledge, timeOut) => timeOut());
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent("We couldn't reach the server");
+        expect(onSend).toHaveBeenCalledTimes(3);
+        expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+        expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+      });
+
+      it('does not try again when the problem will not go away by itself', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'notFound' } }),
+        );
+        renderWithRetries();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('no longer exists');
+        expect(onSend).toHaveBeenCalledTimes(1);
+      });
+
+      it('says the server could not be reached, and keeps the text, when no answer comes', async () => {
+        onSend.mockImplementation((_payload, _acknowledge, timeOut) => timeOut());
+        renderShell();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          "We couldn't reach the server. Your changes are still here.",
+        );
+        expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+      });
+
+      it('keeps the text when the answer is not one the app understands', async () => {
+        onSend.mockImplementation((_payload, acknowledge) => acknowledge({ nonsense: true }));
+        renderShell();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('We received unexpected data.');
+        expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+      });
+
+      it('says to slow down, and keeps the text, when sending is rate limited', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'rateLimited' } }),
+        );
+        renderShell();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests.');
+        expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('See you at 10');
+      });
+
+      it('shows the reference of a server failure so it can be found in the logs', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({ ok: false, problem: { kind: 'server', requestId } }),
+        );
+        renderShell();
+        await openOla();
+
+        await failedSend();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Reference: 3f9c2a71');
+      });
+
+      it('sends one message when Send is pressed twice while the first is waiting', async () => {
+        onSend.mockImplementation(() => undefined);
+        renderShell();
+        const user = await openOla();
+
+        await user.click(screen.getByRole('button', { name: 'Send' }));
+        await user.click(screen.getByRole('button', { name: 'Send' }));
+
+        expect(onSend).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+      });
     });
 
     it('sends the same client message id again when a failed message is repeated', async () => {

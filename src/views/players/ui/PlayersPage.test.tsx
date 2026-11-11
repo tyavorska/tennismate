@@ -10,7 +10,7 @@ import { InboxProvider } from '@/features/inbox';
 import { createTestQueryClient, renderWithQuery, TestRealtime } from '@/shared/testing';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlayersPage } from '../index';
 
 vi.mock('next/navigation', async () => {
@@ -91,11 +91,11 @@ const conversations = ['Ola N.', 'Piotr W.', 'Kuba S.', 'Marta K.'].map((name, i
   }),
 );
 
-function renderPage(): void {
+function renderPage({ inbox = 'loaded' }: { inbox?: 'loaded' | 'failing' } = {}): void {
   const client = createTestQueryClient();
   client.setQueryData(openGameQueries.list().queryKey, games);
   client.setQueryData(playerQueries.saved().queryKey, []);
-  client.setQueryData(conversationQueries.list().queryKey, conversations);
+  if (inbox === 'loaded') client.setQueryData(conversationQueries.list().queryKey, conversations);
   renderWithQuery(
     <TestRealtime>
       <InboxProvider viewer={{ id: viewerId, timezone: 'Europe/Warsaw' }}>
@@ -106,7 +106,25 @@ function renderPage(): void {
   );
 }
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe('PlayersPage', () => {
+  it('says the inbox did not load, instead of saying there are no messages, when it fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ kind: 'unavailable' }), { status: 503 })),
+      ),
+    );
+    renderPage({ inbox: 'failing' });
+
+    const inbox = screen.getByRole('region', { name: 'Inbox' });
+
+    expect(await within(inbox).findByText('Messages did not load')).toBeInTheDocument();
+    expect(within(inbox).getByText(/temporarily unavailable/)).toBeInTheDocument();
+    expect(within(inbox).queryByText('No messages yet.')).not.toBeInTheDocument();
+  });
+
   it('has one h1 and groups the page into labelled sections', () => {
     renderPage();
 

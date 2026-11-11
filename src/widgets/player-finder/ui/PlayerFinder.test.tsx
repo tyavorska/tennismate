@@ -416,6 +416,7 @@ describe('PlayerFinder', () => {
           },
         }),
         expect.any(Function),
+        expect.any(Function),
       );
     });
 

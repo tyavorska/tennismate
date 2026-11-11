@@ -1,0 +1,13 @@
+.banner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--space-2) var(--space-4) 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  background: var(--background);
+  border-radius: var(--radius);
+}

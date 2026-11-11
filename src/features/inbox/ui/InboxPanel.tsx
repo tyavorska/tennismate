@@ -14,7 +14,16 @@ import {
   type NewInvite,
 } from '@/entities/conversation';
 import { toApiError } from '@/shared/api';
-import { Avatar, Button, FormAlert, Icon, SelectField, VisuallyHidden } from '@/shared/ui';
+import {
+  Avatar,
+  Banner,
+  Button,
+  ErrorState,
+  FormAlert,
+  Icon,
+  SelectField,
+  VisuallyHidden,
+} from '@/shared/ui';
 import { courtQueries } from '@/entities/court';
 import { defaultInviteTime, inviteDays, inviteTimes } from '../model/inviteOptions';
 import { useMarkRead } from '../model/useMarkRead';
@@ -90,7 +99,7 @@ function ConversationItem({
 }
 
 function ConversationList({ viewer, conversations, onOpen, onClose }: ConversationListProps) {
-  const { data, error, isPending, refetch } = conversations;
+  const { data, error, isPending, isRefetchError, refetch } = conversations;
 
   return (
     <>
@@ -100,15 +109,13 @@ function ConversationList({ viewer, conversations, onOpen, onClose }: Conversati
       </header>
       {isPending && <p className={styles.status}>Loading your messages…</p>}
       {error !== null && data === undefined && (
-        <div className={styles.status}>
-          <FormAlert referenceId={toApiError(error).requestId}>
-            {toApiError(error).message}
-          </FormAlert>
-          <Button variant="outline" onPress={() => void refetch()}>
-            Try again
-          </Button>
-        </div>
+        <ErrorState
+          title="Your messages did not load"
+          error={toApiError(error)}
+          onRetry={() => void refetch()}
+        />
       )}
+      {isRefetchError && <Banner error={toApiError(error)} onRetry={() => void refetch()} />}
       {data?.length === 0 && (
         <p className={styles.status}>
           No messages yet. Press &quot;Let&apos;s play&quot; on a player to say hi.
@@ -152,7 +159,13 @@ function InviteForm({ timeZone, onSend }: InviteFormProps) {
   if (courts.error !== null || court === undefined || date === undefined) {
     return (
       <div className={styles.status}>
-        <FormAlert>{"We couldn't load the courts of your city."}</FormAlert>
+        {courts.error === null ? (
+          <p>Your city has no courts to propose yet.</p>
+        ) : (
+          <FormAlert referenceId={toApiError(courts.error).requestId}>
+            {toApiError(courts.error).message}
+          </FormAlert>
+        )}
         <Button variant="outline" onPress={() => void courts.refetch()}>
           Try again
         </Button>
@@ -344,6 +357,9 @@ function Thread({
         />
       )}
 
+      {messages.isRefetchError && (
+        <Banner error={toApiError(messages.error)} onRetry={() => void messages.refetch()} />
+      )}
       <ul
         ref={listRef}
         className={styles.messages}
@@ -356,11 +372,12 @@ function Thread({
           <li className={styles.hint}>Loading…</li>
         )}
         {messages.error !== null && loaded.length === 0 && (
-          <li className={styles.hint}>
-            {toApiError(messages.error).message}{' '}
-            <Button variant="ghost" onPress={() => void messages.refetch()}>
-              Try again
-            </Button>
+          <li>
+            <ErrorState
+              title="This conversation did not load"
+              error={toApiError(messages.error)}
+              onRetry={() => void messages.refetch()}
+            />
           </li>
         )}
         {loaded.map((message) => (
@@ -375,6 +392,12 @@ function Thread({
         ))}
       </ul>
 
+      {((send.isPending && send.failureCount > 0) ||
+        (respond.isPending && respond.failureCount > 0)) && (
+        <p role="status" className={styles.retrying}>
+          Trying again…
+        </p>
+      )}
       {send.error !== null && (
         <div className={styles.sendError}>
           <FormAlert referenceId={send.error.requestId}>

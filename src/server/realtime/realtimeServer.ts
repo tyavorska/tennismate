@@ -4,8 +4,10 @@ import { Server, type Socket } from 'socket.io';
 import type { z } from 'zod';
 import {
   conversationEvents,
+  inviteResponseRequestSchema,
   sendMessageRequestSchema,
   type ClientToServerEvents,
+  type MessageNewEvent,
   type SendAck,
   type ServerToClientEvents,
 } from '@/entities/conversation';
@@ -13,7 +15,7 @@ import type { User } from '@/entities/user';
 import type { Problem } from '@/shared/api';
 import { sessionCookieName } from '@/shared/config';
 import { findUserBySessionToken } from '../auth';
-import { listPartnerIds, sendMessage } from '../conversations';
+import { listPartnerIds, respondToInvite, sendMessage } from '../conversations';
 import { DomainError, fieldErrorsFrom } from '../http';
 import { getProfile } from '../profiles';
 import { readCookie } from './cookies';
@@ -78,23 +80,24 @@ export function createRealtimeServer(
     }
   }
 
-  function handleSend(
+  // Every request answers on its acknowledgement and never throws into the socket.
+  function handleRequest<TSchema extends z.ZodType>(
     socket: RealtimeSocket,
+    schema: TSchema,
     payload: z.core.util.JSONType,
     acknowledge: ((ack: SendAck) => void) | undefined,
+    work: (input: z.infer<TSchema>) => MessageNewEvent,
   ): void {
     if (typeof acknowledge !== 'function') return;
-    const reply = (ack: SendAck): void => acknowledge(ack);
     const { user } = socket.data;
 
-    const limit = sendLimit.check(user.id);
-    if (!limit.allowed) {
-      reply({ ok: false, problem: { kind: 'rateLimited' } });
+    if (!sendLimit.check(user.id).allowed) {
+      acknowledge({ ok: false, problem: { kind: 'rateLimited' } });
       return;
     }
-    const parsed = sendMessageRequestSchema.safeParse(payload);
+    const parsed = schema.safeParse(payload);
     if (!parsed.success) {
-      reply({
+      acknowledge({
         ok: false,
         problem: { kind: 'validation', fieldErrors: fieldErrorsFrom(parsed.error) },
       });
@@ -102,10 +105,26 @@ export function createRealtimeServer(
     }
 
     try {
-      const sent = sendMessage(user, parsed.data);
-      io.to(userRoom(sent.recipientId)).emit(conversationEvents.messageNew, sent.forRecipient);
+      acknowledge({ ok: true, event: work(parsed.data) });
+    } catch (error) {
+      acknowledge({
+        ok: false,
+        problem: problemFrom(error instanceof Error ? error : String(error)),
+      });
+    }
+  }
+
+  function handleSend(
+    socket: RealtimeSocket,
+    payload: z.core.util.JSONType,
+    acknowledge: ((ack: SendAck) => void) | undefined,
+  ): void {
+    const { user } = socket.data;
+    handleRequest(socket, sendMessageRequestSchema, payload, acknowledge, (input) => {
+      const sent = sendMessage(user, input);
+      io.to(userRoom(sent.recipientId)).emit(conversationEvents.messageNew, sent.forOther);
       // The author's other tabs get it too. This tab gets it as the acknowledgement as well.
-      socket.to(userRoom(user.id)).emit(conversationEvents.messageNew, sent.forSender);
+      socket.to(userRoom(user.id)).emit(conversationEvents.messageNew, sent.forAuthor);
       // A new conversation has no presence yet on either side.
       io.to(userRoom(user.id)).emit(conversationEvents.presenceUpdate, {
         userId: sent.recipientId,
@@ -115,10 +134,27 @@ export function createRealtimeServer(
         userId: user.id,
         online: true,
       });
-      reply({ ok: true, event: sent.forSender });
-    } catch (error) {
-      reply({ ok: false, problem: problemFrom(error instanceof Error ? error : String(error)) });
-    }
+      return sent.forAuthor;
+    });
+  }
+
+  function handleRespond(
+    socket: RealtimeSocket,
+    payload: z.core.util.JSONType,
+    acknowledge: ((ack: SendAck) => void) | undefined,
+  ): void {
+    const { user } = socket.data;
+    handleRequest(socket, inviteResponseRequestSchema, payload, acknowledge, (input) => {
+      const answer = respondToInvite(user, input);
+      const others = userRoom(answer.otherId);
+      io.to(others).emit(conversationEvents.inviteUpdated, answer.updated.forOther);
+      socket.to(userRoom(user.id)).emit(conversationEvents.inviteUpdated, answer.updated.forAuthor);
+      if (answer.reply !== undefined) {
+        io.to(others).emit(conversationEvents.messageNew, answer.reply.forOther);
+        io.to(userRoom(user.id)).emit(conversationEvents.messageNew, answer.reply.forAuthor);
+      }
+      return answer.updated.forAuthor;
+    });
   }
 
   io.on('connection', (socket) => {
@@ -132,6 +168,9 @@ export function createRealtimeServer(
 
     socket.on(conversationEvents.send, (payload, acknowledge) =>
       handleSend(socket, payload, acknowledge),
+    );
+    socket.on(conversationEvents.respondToInvite, (payload, acknowledge) =>
+      handleRespond(socket, payload, acknowledge),
     );
 
     socket.on('disconnect', () => {

@@ -2,19 +2,23 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import type { QueryClient } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
+import { type z } from 'zod';
 import { playerSchema } from '@/entities/player';
 import {
   applyMessageNew,
   conversationQueries,
   conversationSchema,
-  inviteSchema,
+  inviteResponseRequestSchema,
   messageSchema,
   presenceQueries,
   sendAckSchema,
+  sendMessageRequestSchema,
   type Conversation,
+  type InviteResponseRequest,
+  type InviteStatus,
   type Message,
 } from '@/entities/conversation';
+import { calendarQueries } from '@/entities/game';
 import {
   createTestQueryClient,
   createTestSocket,
@@ -71,7 +75,28 @@ const olaMessages = [
   message(3, 1, 'them', "Perfect. I'll bring new balls."),
 ];
 const ola = conversation(1, 'Ola N.', olaMessages[2] ?? message(3, 1, 'them', ''), 2);
-const piotr = conversation(2, 'Piotr W.', message(4, 2, 'them', 'Great match!'), 0);
+
+const playDay = { date: '2026-11-14', time: '10:00', startsAt: '2026-11-14T09:00:00.000Z' };
+
+function inviteMessage(status: InviteStatus, from: 'me' | 'them'): Message {
+  return messageSchema.parse({
+    ...message(4, 2, from, "Let's play at Park Jordana, Sat 14 Nov · 10:00"),
+    invite: {
+      id: uuid(7000),
+      status,
+      proposerId: from === 'me' ? viewerId : uuid(52),
+      court: 'Park Jordana',
+      ...playDay,
+    },
+  });
+}
+
+const piotrInvite = inviteMessage('pending', 'them');
+const piotr = conversation(2, 'Piotr W.', piotrInvite, 0);
+const courts = [
+  { name: 'Kazimierz Clay Club', district: 'Kazimierz' },
+  { name: 'Park Jordana', district: 'Krowodrza' },
+];
 
 let markedRead: string[] = [];
 const onSend = vi.fn();
@@ -88,6 +113,9 @@ function installFakeApi(): void {
       }
       if (input === `/api/conversations/${ola.id}/messages`)
         return Promise.resolve(json(olaMessages));
+      if (input === `/api/conversations/${piotr.id}/messages`)
+        return Promise.resolve(json([piotrInvite]));
+      if (input === '/api/courts') return Promise.resolve(json(courts));
       return Promise.resolve(new Response(null, { status: 404 }));
     }),
   );
@@ -105,32 +133,81 @@ function renderShell(client: QueryClient = createTestQueryClient()): QueryClient
   return client;
 }
 
-/** The server's reply to a send: the message saved, in the conversation with the recipient. */
+const sentInviteId = uuid(7100);
+
+const statusByAction = {
+  accept: 'accepted',
+  decline: 'declined',
+  cancel: 'cancelled',
+} as const satisfies Record<InviteResponseRequest['action'], InviteStatus>;
+
+function ack(
+  conversationOf: Conversation,
+  saved: Message,
+  plan?: Conversation['plan'],
+): z.core.util.JSONType {
+  const updated = { ...conversationOf, lastMessage: saved, plan, unreadCount: 0 };
+  return sendAckSchema.parse({ ok: true, event: { conversation: updated, message: saved } });
+}
+
+/** The server's answer to a send, or to an answer to an invite. */
 function accepted(payload: z.core.util.JSONType): z.core.util.JSONType {
-  const { recipientId, clientMessageId, text, invite } = z
-    .object({
-      recipientId: z.string(),
-      clientMessageId: z.string(),
-      text: z.string(),
-      invite: inviteSchema.optional(),
-    })
-    .parse(payload);
+  const answer = inviteResponseRequestSchema.safeParse(payload);
+  if (answer.success) {
+    const { action, inviteId } = answer.data;
+    const status = statusByAction[action];
+    if (inviteId === sentInviteId) {
+      return ack(ola, messageWithInvite(ola, 'me', status));
+    }
+    const plan = action === 'accept' ? { court: 'Park Jordana', ...playDay } : undefined;
+    return ack(piotr, inviteMessage(status, 'them'), plan);
+  }
+
+  const { recipientId, clientMessageId, text, invite } = sendMessageRequestSchema.parse(payload);
+  const target = recipientId === ola.partner.id ? ola : piotr;
   const saved = messageSchema.parse({
     id: uuid(9000),
-    conversationId: ola.id,
+    conversationId: target.id,
     senderId: viewerId,
     clientMessageId,
     text,
-    invite,
+    invite:
+      invite === undefined
+        ? undefined
+        : {
+            id: sentInviteId,
+            status: 'pending',
+            proposerId: viewerId,
+            court: invite.court,
+            date: invite.date,
+            time: invite.time,
+            startsAt: `${invite.date}T09:00:00.000Z`,
+          },
     sentAt: '2026-11-04T09:30:00.000Z',
   });
-  const updated = {
-    ...(recipientId === ola.partner.id ? ola : piotr),
-    lastMessage: saved,
-    plan: invite,
-    unreadCount: 0,
-  };
-  return sendAckSchema.parse({ ok: true, event: { conversation: updated, message: saved } });
+  return ack(target, saved);
+}
+
+function messageWithInvite(
+  target: Conversation,
+  from: 'me' | 'them',
+  status: InviteStatus,
+): Message {
+  return messageSchema.parse({
+    id: uuid(9000),
+    conversationId: target.id,
+    senderId: from === 'me' ? viewerId : target.partner.id,
+    clientMessageId: uuid(9001),
+    text: 'Play?',
+    invite: {
+      id: sentInviteId,
+      status,
+      proposerId: viewerId,
+      court: 'Kazimierz Clay Club',
+      ...playDay,
+    },
+    sentAt: '2026-11-04T09:30:00.000Z',
+  });
 }
 
 async function openAccountMenu(): Promise<ReturnType<typeof userEvent.setup>> {
@@ -254,26 +331,159 @@ describe('AppShell', () => {
       );
     });
 
-    it('shows no plan until an invite is sent, then shows the proposed court and time', async () => {
-      onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
-      renderShell();
-      const user = userEvent.setup();
-      await user.click(await screen.findByRole('button', { name: 'Messages, 1 unread' }));
-      await user.click(await screen.findByRole('button', { name: /Ola N\./ }));
-      await screen.findByText('Are we still on for Saturday?');
-      expect(screen.getByText('No court booked yet')).toBeInTheDocument();
+    describe('game invites', () => {
+      async function openThread(name: RegExp): Promise<ReturnType<typeof userEvent.setup>> {
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole('button', { name: /Messages/ }));
+        await user.click(await screen.findByRole('button', { name: name }));
+        return user;
+      }
 
-      await user.click(screen.getByRole('button', { name: 'Propose a court' }));
-      await user.click(screen.getByRole('button', { name: /Send "let's play" invite/ }));
+      it('proposes a court and time, and waits for the other player to answer', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        expect(screen.getByText('No court booked yet')).toBeInTheDocument();
 
-      expect(await screen.findByText('Tomorrow 10:00 · Kazimierz Clay Club')).toBeInTheDocument();
-      expect(onSend).toHaveBeenCalledWith(
-        expect.objectContaining({
-          invite: { court: 'Kazimierz Clay Club', slot: 'Tomorrow 10:00' },
-        }),
-        expect.any(Function),
-      );
-      expect(screen.queryByRole('form', { name: 'Propose a court' })).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Propose a court' }));
+        await user.click(await screen.findByRole('button', { name: /Send "let's play" invite/ }));
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText('Waiting for Ola')).toBeInTheDocument();
+        expect(within(card).getByText('Kazimierz Clay Club')).toBeInTheDocument();
+        expect(screen.getByText('No court booked yet')).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledWith(
+          expect.objectContaining({
+            invite: {
+              court: 'Kazimierz Clay Club',
+              date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+              time: '10:00',
+            },
+          }),
+          expect.any(Function),
+        );
+        expect(screen.queryByRole('form', { name: 'Propose a court' })).not.toBeInTheDocument();
+      });
+
+      it('lets the proposer cancel an invite that is waiting', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        await user.click(screen.getByRole('button', { name: 'Propose a court' }));
+        await user.click(await screen.findByRole('button', { name: /Send "let's play" invite/ }));
+
+        await user.click(await screen.findByRole('button', { name: 'Cancel invite' }));
+
+        expect(await screen.findByText('Cancelled')).toBeInTheDocument();
+        expect(onSend).toHaveBeenLastCalledWith(
+          { inviteId: sentInviteId, action: 'cancel' },
+          expect.any(Function),
+        );
+      });
+
+      it('shows an invite from the other player with Accept and Decline', async () => {
+        renderShell();
+        await openThread(/Piotr W\./);
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText('Sat 14 Nov · 10:00')).toBeInTheDocument();
+        expect(within(card).getByText('Park Jordana')).toBeInTheDocument();
+        expect(within(card).getByRole('button', { name: 'Accept' })).toBeInTheDocument();
+        expect(within(card).getByRole('button', { name: 'Decline' })).toBeInTheDocument();
+      });
+
+      it('confirms the game for both, links to the calendar and plans the game', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        const client = createTestQueryClient();
+        const invalidate = vi.spyOn(client, 'invalidateQueries');
+        renderShell(client);
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Accept' }));
+
+        const card = await screen.findByRole('article', { name: "Let's play invite" });
+        expect(within(card).getByText(/Confirmed by both/)).toBeInTheDocument();
+        expect(within(card).getByRole('link', { name: 'in your calendar' })).toHaveAttribute(
+          'href',
+          '/calendar?day=2026-11-14',
+        );
+        expect(screen.getByText('Sat 14 Nov · 10:00 · Park Jordana')).toBeInTheDocument();
+        expect(onSend).toHaveBeenCalledWith(
+          { inviteId: piotrInvite.invite?.id, action: 'accept' },
+          expect.any(Function),
+        );
+        expect(invalidate).toHaveBeenCalledWith(calendarQueries.all());
+      });
+
+      it('declines an invite', async () => {
+        onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
+        renderShell();
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Decline' }));
+
+        expect(await screen.findByText('Declined')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+      });
+
+      it('says so when an invite can no longer be answered, and leaves the card as it was', async () => {
+        onSend.mockImplementation((_payload, acknowledge) =>
+          acknowledge({
+            ok: false,
+            problem: { kind: 'conflict', message: 'The time of this invite has passed.' },
+          }),
+        );
+        renderShell();
+        const user = await openThread(/Piotr W\./);
+
+        await user.click(await screen.findByRole('button', { name: 'Accept' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          'The time of this invite has passed.',
+        );
+        expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
+      });
+
+      it('updates the card when the other player answers while it is open', async () => {
+        const client = renderShell();
+        await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        const mine = messageWithInvite(ola, 'me', 'pending');
+        act(() =>
+          applyMessageNew(client, { conversation: { ...ola, lastMessage: mine }, message: mine }),
+        );
+        expect(await screen.findByText('Waiting for Ola')).toBeInTheDocument();
+
+        const answered = messageWithInvite(ola, 'me', 'accepted');
+        act(() =>
+          applyMessageNew(client, {
+            conversation: {
+              ...ola,
+              lastMessage: answered,
+              plan: { court: 'Kazimierz Clay Club', ...playDay },
+            },
+            message: answered,
+          }),
+        );
+
+        expect(await screen.findByText(/Confirmed by both/)).toBeInTheDocument();
+        expect(screen.queryByText('Waiting for Ola')).not.toBeInTheDocument();
+      });
+
+      it('shows an invite whose time has passed as expired', async () => {
+        const client = renderShell();
+        await openThread(/Ola N\./);
+        await screen.findByText('Are we still on for Saturday?');
+        const old = messageWithInvite(ola, 'them', 'expired');
+
+        act(() =>
+          applyMessageNew(client, { conversation: { ...ola, lastMessage: old }, message: old }),
+        );
+
+        expect(await screen.findByText('Expired')).toBeInTheDocument();
+      });
     });
 
     it('sends a quick reply', async () => {

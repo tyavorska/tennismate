@@ -1,31 +1,27 @@
 'use client';
 
-import type { UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Input, Label, TextField } from 'react-aria-components';
 import {
+  formatInviteDay,
   formatListTime,
   formatMessageTime,
   type ChatPartner,
   type Conversation,
-  type Invite,
+  type InviteResponseRequest,
   type Message,
+  type NewInvite,
 } from '@/entities/conversation';
 import { toApiError } from '@/shared/api';
-import {
-  Avatar,
-  Button,
-  FormAlert,
-  Icon,
-  SelectField,
-  ToggleGroup,
-  ToggleItem,
-  VisuallyHidden,
-} from '@/shared/ui';
-import { inviteCourts, inviteSlots } from '../model/inviteOptions';
+import { Avatar, Button, FormAlert, Icon, SelectField, VisuallyHidden } from '@/shared/ui';
+import { courtQueries } from '@/entities/court';
+import { defaultInviteTime, inviteDays, inviteTimes } from '../model/inviteOptions';
 import { useMarkRead } from '../model/useMarkRead';
+import { useRespondToInvite } from '../model/useRespondToInvite';
 import { useIsOnline, useThreadMessages } from '../model/useConversations';
 import { useSendMessage } from '../model/useSendMessage';
+import { InviteCard } from './InviteCard';
 import styles from './InboxPanel.module.css';
 
 type Viewer = Readonly<{ id: string; timezone: string }>;
@@ -133,16 +129,35 @@ function ConversationList({ viewer, conversations, onOpen, onClose }: Conversati
 }
 
 type InviteFormProps = {
-  onSend: (invite: Invite) => void;
+  timeZone: string;
+  onSend: (invite: NewInvite) => void;
 };
 
-function InviteForm({ onSend }: InviteFormProps) {
-  const [court, setCourt] = useState(inviteCourts[0]?.id ?? '');
-  const [slot, setSlot] = useState<string>(inviteSlots[0]);
+function InviteForm({ timeZone, onSend }: InviteFormProps) {
+  const courts = useQuery(courtQueries.list());
+  const days = inviteDays(new Date(), timeZone);
+  const courtOptions = (courts.data ?? []).map(({ name }) => ({ id: name, label: name }));
+  const [chosenCourt, setCourt] = useState<string | undefined>(undefined);
+  const [chosenDate, setDate] = useState<string | undefined>(undefined);
+  const [time, setTime] = useState(defaultInviteTime);
+  const court = chosenCourt ?? courtOptions[0]?.id;
+  const date = chosenDate ?? days[1]?.id ?? days[0]?.id;
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onSend({ slot, court });
+    if (court !== undefined && date !== undefined) onSend({ court, date, time });
+  }
+
+  if (courts.isPending) return <p className={styles.status}>Loading courts…</p>;
+  if (courts.error !== null || court === undefined || date === undefined) {
+    return (
+      <div className={styles.status}>
+        <FormAlert>{"We couldn't load the courts of your city."}</FormAlert>
+        <Button variant="outline" onPress={() => void courts.refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -151,25 +166,28 @@ function InviteForm({ onSend }: InviteFormProps) {
         variant="wide"
         label="Court"
         hideLabel
-        options={inviteCourts}
+        options={courtOptions}
         value={court}
         onChange={setCourt}
       />
-      <ToggleGroup
-        className={styles.slots}
-        aria-label="Time"
-        selectedKeys={[slot]}
-        onSelectionChange={(keys) => {
-          const [key] = keys;
-          if (typeof key === 'string') setSlot(key);
-        }}
-      >
-        {inviteSlots.map((option) => (
-          <ToggleItem key={option} id={option} className={styles.slot}>
-            {option}
-          </ToggleItem>
-        ))}
-      </ToggleGroup>
+      <div className={styles.when}>
+        <SelectField
+          variant="wide"
+          label="Day"
+          hideLabel
+          options={days}
+          value={date}
+          onChange={setDate}
+        />
+        <SelectField
+          variant="wide"
+          label="Time"
+          hideLabel
+          options={inviteTimes}
+          value={time}
+          onChange={setTime}
+        />
+      </div>
       <Button type="submit" variant="solid" className={styles.sendInvite}>
         Send &quot;let&apos;s play&quot; invite
       </Button>
@@ -189,7 +207,30 @@ type ThreadProps = {
 
 type Attempt = Readonly<{ text: string; clientMessageId: string }>;
 
-function Bubble({ viewer, message }: { viewer: Viewer; message: Message }) {
+type BubbleProps = {
+  viewer: Viewer;
+  partner: ChatPartner;
+  message: Message;
+  isResponding: boolean;
+  onRespond: (inviteId: string, action: InviteResponseRequest['action']) => void;
+};
+
+function Bubble({ viewer, partner, message, isResponding, onRespond }: BubbleProps) {
+  if (message.invite !== undefined) {
+    const { id } = message.invite;
+    return (
+      <InviteCard
+        invite={message.invite}
+        sentAt={message.sentAt}
+        viewerId={viewer.id}
+        partnerName={firstWord(partner.name)}
+        timeZone={viewer.timezone}
+        isResponding={isResponding}
+        onRespond={(action) => onRespond(id, action)}
+      />
+    );
+  }
+
   return (
     <li className={message.senderId === viewer.id ? styles.bubbleMine : styles.bubbleTheirs}>
       <p>{message.text}</p>
@@ -214,6 +255,7 @@ function Thread({
   const listRef = useRef<HTMLUListElement>(null);
   const messages = useThreadMessages(conversation?.id);
   const send = useSendMessage();
+  const respond = useRespondToInvite();
   const markRead = useMarkRead();
   const isOnline = useIsOnline(partner.id);
   const loaded = messages.data ?? [];
@@ -230,7 +272,7 @@ function Thread({
   }, [loaded.length]);
 
   // A repeat of a failed send keeps its id, so the server never saves it twice.
-  function submit(text: string, onSent: () => void, invite?: Invite): void {
+  function submit(text: string, onSent: () => void, invite?: NewInvite): void {
     const trimmed = text.trim();
     if (trimmed === '') return;
     const clientMessageId =
@@ -278,7 +320,7 @@ function Thread({
         <p className={styles.planText}>
           {conversation?.plan === undefined
             ? 'No court booked yet'
-            : `${conversation.plan.slot} · ${conversation.plan.court}`}
+            : `${formatInviteDay(conversation.plan.date)} · ${conversation.plan.time} · ${conversation.plan.court}`}
         </p>
         <Button
           variant="solid"
@@ -291,11 +333,13 @@ function Thread({
       </div>
       {isInviting && (
         <InviteForm
-          onSend={({ slot, court }) =>
-            submit(`Let's play at ${court}, ${slot}?`, () => onInvitingChange(false), {
-              court,
-              slot,
-            })
+          timeZone={viewer.timezone}
+          onSend={(invite) =>
+            submit(
+              `Let's play at ${invite.court}, ${formatInviteDay(invite.date)} · ${invite.time}`,
+              () => onInvitingChange(false),
+              invite,
+            )
           }
         />
       )}
@@ -320,7 +364,14 @@ function Thread({
           </li>
         )}
         {loaded.map((message) => (
-          <Bubble key={message.id} viewer={viewer} message={message} />
+          <Bubble
+            key={message.id}
+            viewer={viewer}
+            partner={partner}
+            message={message}
+            isResponding={respond.isPending}
+            onRespond={(inviteId, action) => respond.mutate({ inviteId, action })}
+          />
         ))}
       </ul>
 
@@ -329,6 +380,11 @@ function Thread({
           <FormAlert referenceId={send.error.requestId}>
             {send.error.message} Your message is still in the box.
           </FormAlert>
+        </div>
+      )}
+      {respond.error !== null && (
+        <div className={styles.sendError}>
+          <FormAlert referenceId={respond.error.requestId}>{respond.error.message}</FormAlert>
         </div>
       )}
 

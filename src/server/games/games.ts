@@ -44,6 +44,9 @@ const gameRowSchema = z.object({
   spots: z.number(),
   taken: z.number(),
   joined: z.number(),
+  /** 1 for a game two players agreed in a chat. It is never listed or joined by others. */
+  is_invite: z.number(),
+  guest_name: z.string().nullable(),
 });
 type GameRow = z.infer<typeof gameRowSchema>;
 
@@ -52,7 +55,11 @@ const selectGames = `
          districts.name AS district, games.starts_at, games.format, games.rating, games.spots,
          (SELECT COUNT(*) FROM game_participants WHERE game_id = games.id) AS taken,
          EXISTS (SELECT 1 FROM game_participants
-                 WHERE game_id = games.id AND user_id = ?) AS joined
+                 WHERE game_id = games.id AND user_id = ?) AS joined,
+         EXISTS (SELECT 1 FROM game_invites WHERE game_id = games.id) AS is_invite,
+         (SELECT guest.name FROM game_participants
+          JOIN profiles AS guest ON guest.user_id = game_participants.user_id
+          WHERE game_participants.game_id = games.id LIMIT 1) AS guest_name
   FROM games
   JOIN profiles ON profiles.user_id = games.host_id
   JOIN courts ON courts.id = games.court_id
@@ -64,6 +71,7 @@ function toOpenGame(
   today: IsoDate,
   timeZone: string,
 ): OpenGame | undefined {
+  if (row.is_invite === 1) return undefined;
   const { date, time } = toWallClock(new Date(row.starts_at), timeZone);
   const day = dayOfDate(date, today);
   if (day === undefined) return undefined;
@@ -95,8 +103,10 @@ function findGameRow(viewerId: string, cityId: number, gameId: string): GameRow 
 
 function requireGame(viewerId: string, cityId: number, gameId: string): GameRow {
   const row = findGameRow(viewerId, cityId, gameId);
-  if (row === undefined)
+  // A game agreed in a chat is managed from the chat, not through the open games.
+  if (row === undefined || row.is_invite === 1) {
     throw new DomainError('notFound', { message: 'This game no longer exists.' });
+  }
   return row;
 }
 
@@ -169,6 +179,35 @@ export function createGame(user: User, input: NewGame, now: Date = new Date()): 
   return requireOpenGame(user.id, city, id, today);
 }
 
+type AgreedGame = Readonly<{
+  hostId: string;
+  guestId: string;
+  courtId: number;
+  startsAt: Date;
+  rating: number;
+}>;
+
+/**
+ * The game two players agreed in a chat: the proposer hosts, the other player has the one spot.
+ * Part of the caller's transaction. Only the invite points at it, which keeps it out of the lists.
+ */
+export function insertAgreedGame(
+  { hostId, guestId, courtId, startsAt, rating }: AgreedGame,
+  now: Date,
+): string {
+  const id = randomUUID();
+  db.prepare(
+    `INSERT INTO games (id, host_id, court_id, starts_at, format, rating, spots, looking_for, note, created_at)
+     VALUES (?, ?, ?, ?, 'singles', ?, 1, 'nearLevel', '', ?)`,
+  ).run(id, hostId, courtId, startsAt.toISOString(), rating, now.toISOString());
+  db.prepare('INSERT INTO game_participants (game_id, user_id, joined_at) VALUES (?, ?, ?)').run(
+    id,
+    guestId,
+    now.toISOString(),
+  );
+  return id;
+}
+
 export function deleteGame(user: User, gameId: string): void {
   const { city } = requireProfile(user);
   const game = requireGame(user.id, city.id, gameId);
@@ -239,7 +278,7 @@ function toCalendarEvent(
     return calendarEventSchema.parse({
       ...base,
       kind: 'game',
-      title: `${format} game`,
+      title: row.is_invite === 1 ? (row.guest_name ?? row.host_name) : `${format} game`,
       confirmed: row.taken > 0,
     });
   }
@@ -251,7 +290,7 @@ function toCalendarEvent(
       confirmed: true,
     });
   }
-  if (row.taken >= row.spots) return undefined;
+  if (row.is_invite === 1 || row.taken >= row.spots) return undefined;
   return calendarEventSchema.parse({ ...base, kind: 'open', host: row.host_name, format });
 }
 

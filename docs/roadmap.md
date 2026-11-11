@@ -4,6 +4,8 @@ Read this before building any of the items below.
 
 ## Planned, not built yet
 
+- **Cancel or reschedule a confirmed invite game.** Either player cancels from the chat card. It
+  removes the game from both calendars, marks the invite `cancelled`, and tells the other player.
 - **Clubs register and own their courts.** A club that is not in the database creates a court
   (`source = 'manual'`), and that alone opens a city, so a city does not need an import to open. A
   club that is already there (imported) **claims** the existing court instead of making a
@@ -32,7 +34,9 @@ Read this before building any of the items below.
 Replace these with the same pattern (table, `server/` module, Route Handler, query key) when they
 are built. Until then they stay clearly marked as samples and must not be mixed into real data.
 
-- The court and time choices in the chat invite (`features/inbox/model/inviteOptions.ts`) are fixed lists, not real courts. An invite is a message that carries a court and a time, and the latest one is the conversation's plan. It does not create a game or a booking.
+- Game invites agree a court and a time only. There is no booking, no payment split, and no
+  check that either player is already busy then. Cancelling or changing a confirmed game is not
+  built (planned above).
 - Change password, delete account, notification settings.
 - The level quiz result only changes the filter locally. It does not save to the profile.
 - `online` on a player listing is always `false`; the online dot comes from the socket (`presenceQueries`).

@@ -26,13 +26,16 @@ file says what is built and the decisions that hold the code together.
 - **Unread.** Counted per conversation from a read position (`last_read_message_id`), never stored
   as a flag. Opening a conversation marks it read.
 - **After a reconnect** the client asks for the messages after the last one it has
-  (`?after=<id>`) and refreshes the list. It never trusts the socket buffer.
+  (`?after=<id>`), refreshes the list and the calendar, and reloads any thread that holds a pending
+  invite, because an answer given meanwhile changes an older message. It never trusts the socket buffer.
 - **Online status.** The realtime process counts open sockets per player, so a player is online
   until the last tab closes. It is told only to people who share a conversation with them. It lives
   in memory, so REST cannot know it. The client keeps it in the query cache (`presenceQueries`).
-- **Invites.** "Propose a court" sends a message that carries a court and a time. The latest invite
-  in a conversation is its plan, shown above the thread for both players. An invite does not create
-  a game or a booking.
+- **Game invites.** "Propose a court" sends a message that carries a real court of the city, a day
+  and a time. It shows in the thread as a card. The other player accepts or declines, the proposer
+  can cancel. Accepting creates the game (the proposer hosts, the other player takes the one spot),
+  so it appears in both calendars, and writes the reply "Accepted! See you on court" into the chat.
+  The plan above the thread is the next accepted game of the pair.
 
 ## Decisions
 
@@ -42,6 +45,17 @@ file says what is built and the decisions that hold the code together.
 - **One conversation per pair**, stored `user_a < user_b` with a `UNIQUE` constraint. It is created
   with the first message, never when a chat is opened. A chat with someone who has no conversation
   yet is addressed by their id.
+- **The game exists only after acceptance.** A pending, declined or cancelled invite is a row in
+  `game_invites` and nothing else, so no game list or calendar can show it. An accepted game is a
+  normal `games` row that `game_invites.game_id` points at. That row is hidden from the open games
+  and from other players, and `joinGame`, `leaveGame` and `deleteGame` answer `notFound` for it.
+  Cancelling a confirmed game is not built yet.
+- **Answering an invite goes over the socket** (`invite:respond`), like sending, because Route
+  Handlers cannot reach the socket process. Both players receive `invite:updated` and the reply
+  with `message:new`. An answer repeated changes nothing; answering a closed invite, or accepting
+  after the start time, answers `conflict`. Only the invitee accepts or declines and only the
+  proposer cancels (`forbidden` otherwise). A stranger or another city gets `notFound`.
+- **`expired` is never stored.** A pending invite whose time has passed is read as expired.
 - **Same city only.** The recipient must be in the sender's city, and a conversation whose other
   player has moved cities disappears from both lists. Both answer `notFound`.
 - **A bad send answers on the acknowledgement**, as `{ ok: false, problem }` with a `Problem` from

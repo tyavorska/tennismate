@@ -171,39 +171,10 @@
   border-radius: 0.875rem;
 }
 
-.slots {
-  display: flex;
-  flex-wrap: wrap;
+.when {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
-}
-
-.slot {
-  padding: 0.5rem 0.875rem;
-  color: var(--foreground);
-  font: inherit;
-  font-size: var(--text-btn);
-  font-weight: 700;
-  line-height: 1.3846;
-  cursor: pointer;
-  background: transparent;
-  border: var(--border-width) solid var(--line);
-  border-radius: var(--radius-full);
-  outline: none;
-}
-
-.slot[data-hovered] {
-  border-color: var(--foreground);
-}
-
-.slot[data-focus-visible] {
-  outline: var(--focus-ring-width) solid var(--focus-ring);
-  outline-offset: var(--focus-ring-offset);
-}
-
-.slot[data-selected] {
-  color: var(--accent-contrast);
-  background: var(--accent);
-  border-color: var(--accent);
 }
 
 .sendInvite {

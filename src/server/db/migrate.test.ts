@@ -255,12 +255,62 @@ describe('migrate', () => {
         VALUES ('m1', 'c1', 'u1', 'k1', 'hi', 'now');
       `);
 
-      migrate(database);
+      migrate(database, migrations.slice(0, 6));
 
       expect(
         database.prepare('SELECT body, invite_court, invite_slot FROM messages').all(),
       ).toEqual([expect.objectContaining({ body: 'hi', invite_court: null, invite_slot: null })]);
       expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    });
+  });
+
+  describe('game invites', () => {
+    function databaseWithInviteMessage(): DatabaseSync {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 6));
+      database.exec(`
+        INSERT INTO users (id, email, password_hash, created_at)
+        VALUES ('u1', 'a@example.com', 'x', 'now'), ('u2', 'b@example.com', 'x', 'now');
+        INSERT INTO conversations (id, user_a, user_b, created_at) VALUES ('c1', 'u1', 'u2', 'now');
+        INSERT INTO messages
+          (id, conversation_id, sender_id, client_message_id, body, invite_court, invite_slot, created_at)
+        VALUES ('m1', 'c1', 'u1', 'k1', 'Play?', 'Park', 'Tomorrow 10:00', 'now'),
+               ('m2', 'c1', 'u2', 'k2', 'Sure', NULL, NULL, 'now');
+      `);
+      return database;
+    }
+
+    it('keeps the messages, and drops the old court and slot columns', () => {
+      const database = databaseWithInviteMessage();
+
+      migrate(database);
+
+      expect(database.prepare('SELECT id, body FROM messages ORDER BY rowid').all()).toEqual([
+        expect.objectContaining({ id: 'm1', body: 'Play?' }),
+        expect.objectContaining({ id: 'm2', body: 'Sure' }),
+      ]);
+      expect(names(database, "pragma_table_info('messages')")).not.toContain('invite_court');
+      expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    });
+
+    it('allows one invite per message and only known statuses', () => {
+      const database = databaseWithInviteMessage();
+      migrate(database);
+      const district = `INSERT INTO districts (city_id, name, latitude, longitude) VALUES (1, 'D', 0, 0)`;
+      database.exec(district);
+      database.exec(
+        `INSERT INTO courts (city_id, district_id, name) VALUES (1, (SELECT id FROM districts WHERE name = 'D'), 'C')`,
+      );
+      const invite = (id: string, status: string): void =>
+        database.exec(
+          `INSERT INTO game_invites (id, message_id, conversation_id, proposer_id, invitee_id, court_id, starts_at, status, created_at)
+           VALUES ('${id}', 'm1', 'c1', 'u1', 'u2', 1, '2026-11-12T09:00:00.000Z', '${status}', 'now')`,
+        );
+
+      invite('i1', 'pending');
+
+      expect(() => invite('i2', 'pending')).toThrow();
+      expect(() => database.exec(`UPDATE game_invites SET status = 'maybe'`)).toThrow();
     });
   });
 

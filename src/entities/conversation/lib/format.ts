@@ -8,6 +8,13 @@ function dayKey(date: Date, timeZone: string): string {
   return formatter(timeZone, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
 
+/** "Sat 31 Oct" for a plain date such as `2026-10-31`. The date has no time zone. */
+export function formatInviteDay(date: string): string {
+  return formatter('UTC', { weekday: 'short', day: 'numeric', month: 'short' }).format(
+    new Date(`${date}T12:00:00Z`),
+  );
+}
+
 /** "18:42" in the viewer's city. */
 export function formatMessageTime(sentAt: string, timeZone: string): string {
   return formatter(timeZone, { hour: '2-digit', minute: '2-digit', hour12: false }).format(

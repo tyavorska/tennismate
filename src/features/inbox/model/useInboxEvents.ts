@@ -10,6 +10,7 @@ import {
   presenceSnapshotSchema,
   presenceUpdateSchema,
 } from '@/entities/conversation';
+import { calendarQueries } from '@/entities/game';
 import { useSocket } from '@/shared/hooks';
 import { catchUp } from './catchUp';
 
@@ -38,6 +39,13 @@ export function useInboxEvents(): void {
       const event = messageNewEventSchema.safeParse(payload);
       if (event.success) applyMessageNew(queryClient, event.data);
     };
+    // An invite that was answered changes the card, and an accepted one changes the calendar.
+    const onInviteUpdated = (payload: Json): void => {
+      const event = messageNewEventSchema.safeParse(payload);
+      if (!event.success) return;
+      applyMessageNew(queryClient, event.data);
+      void queryClient.invalidateQueries(calendarQueries.all());
+    };
     const onSnapshot = (payload: Json): void => {
       const snapshot = presenceSnapshotSchema.safeParse(payload);
       if (snapshot.success) applyPresenceSnapshot(queryClient, snapshot.data);
@@ -50,12 +58,14 @@ export function useInboxEvents(): void {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on(conversationEvents.messageNew, onMessageNew);
+    socket.on(conversationEvents.inviteUpdated, onInviteUpdated);
     socket.on(conversationEvents.presenceSnapshot, onSnapshot);
     socket.on(conversationEvents.presenceUpdate, onUpdate);
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off(conversationEvents.messageNew, onMessageNew);
+      socket.off(conversationEvents.inviteUpdated, onInviteUpdated);
       socket.off(conversationEvents.presenceSnapshot, onSnapshot);
       socket.off(conversationEvents.presenceUpdate, onUpdate);
     };

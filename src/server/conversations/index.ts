@@ -5,6 +5,7 @@ export {
   listMessages,
   listPartnerIds,
   markRead,
+  respondToInvite,
   sendMessage,
 } from './conversations';
-export type { SentMessage } from './conversations';
+export type { InviteResponse, MessageChange, SentMessage } from './conversations';

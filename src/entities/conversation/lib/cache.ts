@@ -19,8 +19,9 @@ export function mergeMessages(
     : [...current, ...added].toSorted((a, b) => a.sentAt.localeCompare(b.sentAt));
 }
 
-/** Puts a new message in the list and, when the thread is loaded, in the thread. */
+/** Puts a message in the list and, when the thread is loaded, in the thread. A known one is replaced. */
 export function applyMessageNew(queryClient: QueryClient, event: MessageNewEvent): void {
+  const { message } = event;
   queryClient.setQueryData(conversationQueries.list().queryKey, (current) =>
     [...(current ?? []).filter(({ id }) => id !== event.conversation.id), event.conversation].sort(
       byLatest,
@@ -28,7 +29,11 @@ export function applyMessageNew(queryClient: QueryClient, event: MessageNewEvent
   );
   queryClient.setQueryData(
     conversationQueries.messages(event.conversation.id).queryKey,
-    (current) => current && mergeMessages(current, [event.message]),
+    (current) =>
+      current &&
+      (current.some(({ id }) => id === message.id)
+        ? current.map((known) => (known.id === message.id ? message : known))
+        : mergeMessages(current, [message])),
   );
 }
 

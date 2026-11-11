@@ -13,6 +13,7 @@ import {
   type PlayerListing,
 } from '@/entities/player';
 import { conversationQueries } from '@/entities/conversation';
+import { courtQueries } from '@/entities/court';
 import {
   createTestQueryClient,
   createTestSocket,
@@ -176,6 +177,7 @@ function renderFinder(initialDialog?: 'offer' | 'quiz'): ReturnType<typeof userE
   client.setQueryData(openGameQueries.list().queryKey, server.games);
   client.setQueryData(playerQueries.saved().queryKey, server.saved);
   client.setQueryData(conversationQueries.list().queryKey, []);
+  client.setQueryData(courtQueries.list().queryKey, courts);
   renderWithQuery(
     <TestRealtime socket={createTestSocket({ onSend })}>
       <InboxProvider
@@ -396,18 +398,22 @@ describe('PlayerFinder', () => {
       expect(within(chat).getByText('Say hi to Piotr.')).toBeInTheDocument();
     });
 
-    it('offers court and time choices and sends the chosen invite as a message', async () => {
+    it('offers the courts of the city and sends the chosen invite as a message', async () => {
       const user = renderFinder();
       await user.click(screen.getByRole('button', { name: "Let's play with Marta K." }));
       const chat = screen.getByRole('dialog', { name: 'Messages' });
 
-      await user.click(within(chat).getByRole('radio', { name: 'Wed 4 Nov 18:00' }));
+      await user.click(within(chat).getByRole('button', { name: /Time/ }));
+      await user.click(screen.getByRole('option', { name: '18:00' }));
       await user.click(within(chat).getByRole('button', { name: /Send "let's play" invite/ }));
 
       expect(onSend).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: "Let's play at Kazimierz Clay Club, Wed 4 Nov 18:00?",
-          invite: { court: 'Kazimierz Clay Club', slot: 'Wed 4 Nov 18:00' },
+          invite: {
+            court: courts[0]?.name,
+            date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+            time: '18:00',
+          },
         }),
         expect.any(Function),
       );

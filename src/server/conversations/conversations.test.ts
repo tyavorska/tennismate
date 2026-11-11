@@ -1,16 +1,20 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import type { User } from '@/entities/user';
+import { isoDateSchema } from '@/shared/lib';
 import { db } from '../db';
+import { deleteGame, joinGame, leaveGame, listCalendarEvents, listOpenGames } from '../games';
 import { DomainError } from '../http';
 import { addCity } from '../testing/cities';
-import { createPlayer } from '../testing/players';
+import { createPlayer, krakowId } from '../testing/players';
 import {
   listConversations,
   listMessages,
   listPartnerIds,
   markRead,
+  respondToInvite,
   sendMessage,
 } from './conversations';
 
@@ -47,9 +51,9 @@ describe('sendMessage', () => {
 
     const sent = send(ana, ben, 'Saturday at 10?', 0);
 
-    expect(sent.forSender.conversation.partner.id).toBe(ben.id);
-    expect(sent.forRecipient.conversation.partner.id).toBe(ana.id);
-    expect(sent.forSender.conversation.id).toBe(sent.forRecipient.conversation.id);
+    expect(sent.forAuthor.conversation.partner.id).toBe(ben.id);
+    expect(sent.forOther.conversation.partner.id).toBe(ana.id);
+    expect(sent.forAuthor.conversation.id).toBe(sent.forOther.conversation.id);
     expect(listConversations(ben)).toHaveLength(1);
   });
 
@@ -60,7 +64,7 @@ describe('sendMessage', () => {
     send(ben, ana, 'Hello', 1);
 
     expect(listConversations(ana)).toHaveLength(1);
-    expect(listMessages(ana, first.forSender.conversation.id).map((m) => m.text)).toEqual([
+    expect(listMessages(ana, first.forAuthor.conversation.id).map((m) => m.text)).toEqual([
       'Hi',
       'Hello',
     ]);
@@ -73,8 +77,8 @@ describe('sendMessage', () => {
     const first = send(ana, ben, 'Hi', 0, clientMessageId);
     const again = send(ana, ben, 'Hi', 5, clientMessageId);
 
-    expect(again.forSender.message.id).toBe(first.forSender.message.id);
-    expect(listMessages(ana, first.forSender.conversation.id)).toHaveLength(1);
+    expect(again.forAuthor.message.id).toBe(first.forAuthor.message.id);
+    expect(listMessages(ana, first.forAuthor.conversation.id)).toHaveLength(1);
   });
 
   it('refuses a message to yourself', async () => {
@@ -106,39 +110,236 @@ describe('sendMessage', () => {
 });
 
 describe('invites', () => {
-  it('makes the latest invite the plan of the conversation, for both players', async () => {
-    const { ana, ben } = await pair();
-    send(ana, ben, 'Hi', 0);
-    const first = { court: 'Kazimierz Clay Club', slot: 'Tomorrow 10:00' };
-    const second = { court: 'Park Jordana', slot: 'Thu 5 Nov 19:30' };
+  async function trio(): Promise<{ ana: User; ben: User; cleo: User }> {
+    return { ...(await pair()), cleo: await createPlayer(newEmail('cleo')) };
+  }
 
-    sendMessage(
-      ana,
-      { recipientId: ben.id, clientMessageId: randomUUID(), text: 'Play?', invite: first },
-      at(1),
-    );
-    const sent = sendMessage(
-      ben,
+  function courtName(): string {
+    const row = db
+      .prepare('SELECT name FROM courts WHERE city_id = ? AND removed_at IS NULL LIMIT 1')
+      .get(krakowId());
+    return z.object({ name: z.string() }).parse(row).name;
+  }
+
+  const gameDay = '2026-11-12';
+
+  function invite(from: User, to: User, seconds = 1) {
+    return sendMessage(
+      from,
       {
-        recipientId: ana.id,
+        recipientId: to.id,
         clientMessageId: randomUUID(),
-        text: 'How about this?',
-        invite: second,
+        text: 'Play?',
+        invite: { court: courtName(), date: gameDay, time: '10:00' },
       },
-      at(2),
+      at(seconds),
     );
-    send(ana, ben, 'Great', 3);
+  }
 
-    expect(sent.forSender.message.invite).toEqual(second);
-    expect(listConversations(ana)[0]?.plan).toEqual(second);
-    expect(listConversations(ben)[0]?.plan).toEqual(second);
+  function respond(
+    user: User,
+    inviteId: string,
+    action: 'accept' | 'decline' | 'cancel',
+    seconds = 5,
+  ) {
+    return respondToInvite(user, { inviteId, action }, at(seconds));
+  }
+
+  function inviteIdOf(sent: ReturnType<typeof invite>): string {
+    return sent.forAuthor.message.invite?.id ?? '';
+  }
+
+  function calendarOf(user: User) {
+    return listCalendarEvents(
+      user,
+      isoDateSchema.parse('2026-11-09'),
+      isoDateSchema.parse('2026-11-15'),
+    );
+  }
+
+  it('shows a pending invite to both players, and creates no game yet', async () => {
+    const { ana, ben } = await trio();
+
+    const sent = invite(ana, ben);
+
+    expect(sent.forOther.message.invite).toMatchObject({
+      status: 'pending',
+      proposerId: ana.id,
+      date: gameDay,
+      time: '10:00',
+    });
+    expect(calendarOf(ana)).toEqual([]);
+    expect(calendarOf(ben)).toEqual([]);
   });
 
-  it('has no plan until someone sends an invite', async () => {
-    const { ana, ben } = await pair();
-    send(ana, ben, 'Hi', 0);
+  it('puts an accepted game in both calendars, with the other player as the title', async () => {
+    const { ana, ben } = await trio();
+    const sent = invite(ana, ben);
 
-    expect(listConversations(ben)[0]?.plan).toBeUndefined();
+    respond(ben, inviteIdOf(sent), 'accept');
+
+    expect(calendarOf(ana)).toEqual([
+      expect.objectContaining({
+        kind: 'game',
+        title: expect.stringContaining('Ben'),
+        confirmed: true,
+        date: gameDay,
+        time: '10:00',
+      }),
+    ]);
+    expect(calendarOf(ben)).toEqual([
+      expect.objectContaining({
+        kind: 'game',
+        title: expect.stringContaining('Ana'),
+        confirmed: true,
+      }),
+    ]);
+  });
+
+  it('writes a reply when the invite is accepted, and makes the game the plan', async () => {
+    const { ana, ben } = await trio();
+    const sent = invite(ana, ben);
+
+    const answer = respond(ben, inviteIdOf(sent), 'accept');
+
+    expect(answer.updated.forAuthor.message.invite?.status).toBe('accepted');
+    expect(answer.reply?.forOther.message.text).toContain('Accepted');
+    expect(answer.reply?.forOther.conversation.unreadCount).toBeGreaterThan(0);
+    expect(listConversations(ana, at(6))[0]?.plan).toMatchObject({ date: gameDay, time: '10:00' });
+    expect(listConversations(ben, at(6))[0]?.plan).toMatchObject({ date: gameDay, time: '10:00' });
+  });
+
+  it('never shows an invite game to a third player, as an open game or in their calendar', async () => {
+    const { ana, ben, cleo } = await trio();
+    respond(ben, inviteIdOf(invite(ana, ben)), 'accept');
+
+    expect(calendarOf(cleo)).toEqual([]);
+    expect(listOpenGames(cleo, at(6)).filter((game) => game.hostName === 'Ana')).toEqual([]);
+  });
+
+  it('keeps an invite game out of the open games API', async () => {
+    const { ana, ben, cleo } = await trio();
+    respond(ben, inviteIdOf(invite(ana, ben)), 'accept');
+    const { id } = z
+      .object({ id: z.string() })
+      .parse(db.prepare('SELECT id FROM games WHERE host_id = ?').get(ana.id));
+
+    expect(kindOf(() => joinGame(cleo, id, at(6)))).toBe('notFound');
+    expect(kindOf(() => leaveGame(ben, id, at(6)))).toBe('notFound');
+    expect(kindOf(() => deleteGame(ana, id))).toBe('notFound');
+  });
+
+  it('repeats an accept without a second game or a second reply', async () => {
+    const { ana, ben } = await trio();
+    const sent = invite(ana, ben);
+
+    respond(ben, inviteIdOf(sent), 'accept');
+    const again = respond(ben, inviteIdOf(sent), 'accept', 6);
+
+    expect(again.reply).toBeUndefined();
+    expect(calendarOf(ana)).toHaveLength(1);
+    expect(listMessages(ben, sent.forAuthor.conversation.id)).toHaveLength(2);
+  });
+
+  it('declines and cancels without a game', async () => {
+    const { ana, ben } = await trio();
+    const declined = invite(ana, ben);
+    const cancelled = invite(ana, ben, 2);
+
+    const answer = respond(ben, inviteIdOf(declined), 'decline');
+    respond(ana, inviteIdOf(cancelled), 'cancel');
+
+    expect(answer.updated.forOther.message.invite?.status).toBe('declined');
+    expect(calendarOf(ana)).toEqual([]);
+    expect(calendarOf(ben)).toEqual([]);
+  });
+
+  it('refuses a change of mind after the invite was answered', async () => {
+    const { ana, ben } = await trio();
+    const accepted = invite(ana, ben);
+    const declined = invite(ana, ben, 2);
+    respond(ben, inviteIdOf(accepted), 'accept');
+    respond(ben, inviteIdOf(declined), 'decline');
+
+    expect(kindOf(() => respond(ben, inviteIdOf(accepted), 'decline', 7))).toBe('conflict');
+    expect(kindOf(() => respond(ben, inviteIdOf(declined), 'accept', 7))).toBe('conflict');
+    expect(kindOf(() => respond(ana, inviteIdOf(accepted), 'cancel', 7))).toBe('conflict');
+  });
+
+  it('refuses to accept after the time has passed, and shows the invite as expired', async () => {
+    const { ana, ben } = await trio();
+    const sent = invite(ana, ben);
+    const afterwards = new Date('2026-11-12T12:00:00.000Z');
+
+    expect(
+      kindOf(() =>
+        respondToInvite(ben, { inviteId: inviteIdOf(sent), action: 'accept' }, afterwards),
+      ),
+    ).toBe('conflict');
+    expect(
+      listMessages(ben, sent.forAuthor.conversation.id, {}, afterwards).at(-1)?.invite?.status,
+    ).toBe('expired');
+  });
+
+  it('lets only the invited player answer and only the proposer cancel', async () => {
+    const { ana, ben } = await trio();
+    const sent = invite(ana, ben);
+
+    expect(kindOf(() => respond(ana, inviteIdOf(sent), 'accept'))).toBe('forbidden');
+    expect(kindOf(() => respond(ben, inviteIdOf(sent), 'cancel'))).toBe('forbidden');
+  });
+
+  it('answers not found to a stranger and to a player in another city', async () => {
+    const { ana, ben, cleo } = await trio();
+    const sent = invite(ana, ben);
+    const gdansk = addCity('gdansk-invite');
+    const outsider = await createPlayer(newEmail('outsider'), gdansk.id);
+
+    expect(kindOf(() => respond(cleo, inviteIdOf(sent), 'accept'))).toBe('notFound');
+    expect(kindOf(() => respond(outsider, inviteIdOf(sent), 'accept'))).toBe('notFound');
+    expect(kindOf(() => respond(ben, randomUUID(), 'accept'))).toBe('notFound');
+  });
+
+  it('refuses an invite for a court of another city, or a time in the past', async () => {
+    const { ana, ben } = await trio();
+    const gdansk = addCity('gdansk-court');
+    const request = (court: string, date: string) => () =>
+      sendMessage(
+        ana,
+        {
+          recipientId: ben.id,
+          clientMessageId: randomUUID(),
+          text: 'Play?',
+          invite: { court, date, time: '10:00' },
+        },
+        at(1),
+      );
+
+    expect(kindOf(request(gdansk.court, gameDay))).toBe('validation');
+    expect(kindOf(request(courtName(), '2026-11-04'))).toBe('validation');
+    expect(kindOf(request(courtName(), '2027-06-01'))).toBe('validation');
+    expect(listConversations(ben)).toHaveLength(0);
+  });
+
+  it('saves an invite once when the same client message id is sent again', async () => {
+    const { ana, ben } = await trio();
+    const clientMessageId = randomUUID();
+    const send = () =>
+      sendMessage(
+        ana,
+        {
+          recipientId: ben.id,
+          clientMessageId,
+          text: 'Play?',
+          invite: { court: courtName(), date: gameDay, time: '10:00' },
+        },
+        at(1),
+      );
+
+    const first = send();
+    const again = send();
+
+    expect(again.forAuthor.message.invite?.id).toBe(first.forAuthor.message.invite?.id);
   });
 });
 
@@ -184,10 +385,10 @@ describe('unread and markRead', () => {
 
   it('clears the count once read, and counts a message that arrives later', async () => {
     const { ana, ben } = await pair();
-    const { forSender } = send(ana, ben, 'One', 0);
+    const { forAuthor } = send(ana, ben, 'One', 0);
 
-    markRead(ben, forSender.conversation.id);
-    markRead(ben, forSender.conversation.id);
+    markRead(ben, forAuthor.conversation.id);
+    markRead(ben, forAuthor.conversation.id);
     expect(listConversations(ben)[0]?.unreadCount).toBe(0);
 
     send(ana, ben, 'Two', 1);
@@ -196,8 +397,8 @@ describe('unread and markRead', () => {
 
   it('counts messages sent in the same millisecond as the one that was read', async () => {
     const { ana, ben } = await pair();
-    const { forSender } = send(ana, ben, 'One', 0);
-    markRead(ben, forSender.conversation.id);
+    const { forAuthor } = send(ana, ben, 'One', 0);
+    markRead(ben, forAuthor.conversation.id);
 
     send(ana, ben, 'Two', 0);
     send(ana, ben, 'Three', 0);
@@ -207,11 +408,11 @@ describe('unread and markRead', () => {
 
   it('refuses a stranger', async () => {
     const { ana, ben } = await pair();
-    const { forSender } = send(ana, ben, 'Hi', 0);
+    const { forAuthor } = send(ana, ben, 'Hi', 0);
     const stranger = await createPlayer(newEmail('eve'));
 
-    expect(kindOf(() => markRead(stranger, forSender.conversation.id))).toBe('notFound');
-    expect(kindOf(() => listMessages(stranger, forSender.conversation.id))).toBe('notFound');
+    expect(kindOf(() => markRead(stranger, forAuthor.conversation.id))).toBe('notFound');
+    expect(kindOf(() => listMessages(stranger, forAuthor.conversation.id))).toBe('notFound');
   });
 });
 
@@ -222,8 +423,8 @@ describe('listMessages', () => {
     send(ben, ana, 'Two', 1);
     send(ana, ben, 'Three', 2);
 
-    const missed = listMessages(ben, first.forSender.conversation.id, {
-      after: first.forSender.message.id,
+    const missed = listMessages(ben, first.forAuthor.conversation.id, {
+      after: first.forAuthor.message.id,
     });
 
     expect(missed.map((m) => m.text)).toEqual(['Two', 'Three']);
@@ -234,9 +435,9 @@ describe('listMessages', () => {
     const first = send(ana, ben, 'One', 0);
     for (const text of ['Two', 'Three', 'Four', 'Five']) send(ana, ben, text, 0);
 
-    const all = listMessages(ben, first.forSender.conversation.id);
-    const after = listMessages(ben, first.forSender.conversation.id, {
-      after: first.forSender.message.id,
+    const all = listMessages(ben, first.forAuthor.conversation.id);
+    const after = listMessages(ben, first.forAuthor.conversation.id, {
+      after: first.forAuthor.message.id,
     });
 
     expect(all.map((m) => m.text)).toEqual(['One', 'Two', 'Three', 'Four', 'Five']);
@@ -251,7 +452,7 @@ describe('listMessages', () => {
 
     expect(
       kindOf(() =>
-        listMessages(ana, mine.forSender.conversation.id, { after: other.forSender.message.id }),
+        listMessages(ana, mine.forAuthor.conversation.id, { after: other.forAuthor.message.id }),
       ),
     ).toBe('notFound');
   });

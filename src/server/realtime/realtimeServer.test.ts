@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server as HttpServer } from 'node:http';
 import { io as connect, type Socket } from 'socket.io-client';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   messageNewEventSchema,
@@ -12,6 +12,8 @@ import {
   type PresenceUpdate,
 } from '@/entities/conversation';
 import type { User } from '@/entities/user';
+import { addDays, todayIn } from '@/shared/lib';
+import { db } from '../db';
 import { listConversations, sendMessage } from '../conversations';
 import { addCity } from '../testing/cities';
 import { createPlayer } from '../testing/players';
@@ -166,6 +168,84 @@ describe('instant messages', () => {
 
     expect(ack.ok).toBe(true);
     expect(listConversations(ben)[0]?.lastMessage.text).toBe('Still working');
+  });
+});
+
+describe('game invites', () => {
+  const timeZone = 'Europe/Warsaw';
+
+  function courtName(): string {
+    const row = db.prepare('SELECT name FROM courts WHERE removed_at IS NULL LIMIT 1').get();
+    return z.object({ name: z.string() }).parse(row).name;
+  }
+
+  function proposal(recipient: User) {
+    return {
+      ...request(recipient, "Let's play"),
+      invite: {
+        court: courtName(),
+        date: addDays(todayIn(new Date(), timeZone), 3),
+        time: '10:00',
+      },
+    };
+  }
+
+  async function inviteSent() {
+    const ana = await createPlayer(email('ana'));
+    const ben = await createPlayer(email('ben'));
+    const anaSocket = await connectAs(ana);
+    const benSocket = await connectAs(ben);
+    const arrived = once(benSocket, 'message:new');
+    const ack = await sendAndAwait(anaSocket, proposal(ben));
+    await arrived;
+    return { ana, ben, anaSocket, benSocket, ack };
+  }
+
+  it('delivers a pending invite to the other player', async () => {
+    const { ack } = await inviteSent();
+
+    expect(ack.ok && ack.event.message.invite?.status).toBe('pending');
+  });
+
+  it('tells both players when the invite is accepted, with the reply, and plans the game', async () => {
+    const { ana, benSocket, anaSocket, ack } = await inviteSent();
+    const inviteId = ack.ok ? ack.event.message.invite?.id : undefined;
+    const updated = once(anaSocket, 'invite:updated');
+    const reply = once(anaSocket, 'message:new');
+
+    const answer = sendAckSchema.parse(
+      await benSocket.timeout(2000).emitWithAck('invite:respond', { inviteId, action: 'accept' }),
+    );
+
+    const seenByAna = messageNewEventSchema.parse(await updated);
+    expect(answer.ok && answer.event.message.invite?.status).toBe('accepted');
+    expect(seenByAna.message.invite?.status).toBe('accepted');
+    expect(seenByAna.conversation.plan).toBeDefined();
+    expect(messageNewEventSchema.parse(await reply).message.text).toContain('Accepted');
+    expect(listConversations(ana)[0]?.plan).toBeDefined();
+  });
+
+  it('refuses an answer from the proposer', async () => {
+    const { anaSocket, ack } = await inviteSent();
+    const inviteId = ack.ok ? ack.event.message.invite?.id : undefined;
+
+    const answer = sendAckSchema.parse(
+      await anaSocket.timeout(2000).emitWithAck('invite:respond', { inviteId, action: 'accept' }),
+    );
+
+    expect(answer).toMatchObject({ ok: false, problem: { kind: 'forbidden' } });
+  });
+
+  it('answers a problem for an answer that is not an invite answer', async () => {
+    const { benSocket } = await inviteSent();
+
+    const answer = sendAckSchema.parse(
+      await benSocket
+        .timeout(2000)
+        .emitWithAck('invite:respond', { inviteId: 'nope', action: 'accept' }),
+    );
+
+    expect(answer).toMatchObject({ ok: false, problem: { kind: 'validation' } });
   });
 });
 

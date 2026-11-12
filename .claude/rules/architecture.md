@@ -5,6 +5,19 @@ paths:
 
 # Feature-Sliced Design
 
+## Layers
+
+```
+src/
+├── app/        Next.js App Router: routing files, root layout, providers, global styles
+├── views/      Route-level page compositions (FSD "pages"; renamed because Next reserves pages/)
+├── widgets/    Self-contained UI blocks composed from features and entities (header, match list)
+├── features/   User interactions and business actions (create-match, filter-players)
+├── entities/   Business objects: types, schemas, queries, base UI (player, match, court)
+├── shared/     Reusable code with no business knowledge (ui kit, api client, lib, config)
+└── server/     Backend-only code: database, external services, auth
+```
+
 ## Import rules
 
 - **Imports flow downward only**: `app → views → widgets → features → entities → shared`. A layer

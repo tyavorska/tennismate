@@ -8,8 +8,30 @@
     "reportMustNotMention": ["not run", "approval", "wouldn't load"]
   },
   {
+    "id": "happy-escape-hatch",
+    "prompt": "review my changes",
+    "fixture": "fixtures/escape-hatch.patch",
+    "shouldTrigger": true,
+    "reportMustMention": ["src/shared/lib/formatPlayerName.ts", "escape hatch", "typecheck"],
+    "reportMustNotMention": ["not run", "approval", "wouldn't load"]
+  },
+  {
+    "id": "happy-no-changes",
+    "prompt": "review my changes",
+    "shouldTrigger": true,
+    "reportMustMention": ["to review"],
+    "reportMustNotMention": ["## Code review", "not run", "approval", "wouldn't load"]
+  },
+  {
     "id": "negative-log-question",
     "prompt": "What does this error mean? Just explain it, in two sentences: SqliteError: no such table: profiles",
+    "shouldTrigger": false,
+    "reportMustMention": [],
+    "reportMustNotMention": []
+  },
+  {
+    "id": "negative-pull-request",
+    "prompt": "Review pull request #22 on GitHub",
     "shouldTrigger": false,
     "reportMustMention": [],
     "reportMustNotMention": []

@@ -1,6 +1,6 @@
 ---
 name: let-code-review
-description: Review the uncommitted changes in the Let (TennisMate) repo against CLAUDE.md and the matching .claude/rules files, and report findings without changing anything. Use when the user asks to review, check or look over their changes, diff or work before a commit ("review my changes", "code review", "is this ready to commit?", "check my diff"). Runs lint, typecheck, format check and tests and reports their real results. Read-only, never edits, commits or opens a PR. Do not use for Mission Control code (that is mc-code-review), for a pushed branch or a PR, for writing or fixing code, or for a plain question about an error, a log or how something works.
+description: Review the uncommitted changes in the Let repo against CLAUDE.md and the matching .claude/rules files, and report findings without changing anything. Use when the user asks to review or check their changes before a commit ("review my changes", "is this ready to commit?"). Read-only, never edits, commits or opens a PR.
 context: fork
 background: false
 model: opus
@@ -18,8 +18,8 @@ commit or push: the review is evidence for the author, not a fix.
 
 **No evidence, no finding.** A finding needs all three: the `file:line` in the diff, the rule it
 breaks (quoted from `CLAUDE.md` or a rules file), and a concrete failure case (input or state →
-wrong result). If you cannot fill in all three, drop it. Never write that a check passed unless
-its output in step 2 says so.
+wrong result). If you cannot fill in all three, drop it. Report a check as PASS only when its
+output in step 2 says so.
 
 ## The changes
 
@@ -31,31 +31,16 @@ If the block above says `NO CHANGES`, answer "No uncommitted changes to review."
 
 ## Workflow
 
-Follow these steps in order. Do not skip or reorder them.
-
-1. **Load the rules.** Read `.claude/CLAUDE.md`. Then read each rules file whose area the diff
-   touches, and no others:
-
-   | Diff touches                                       | Read                                     |
-   | -------------------------------------------------- | ---------------------------------------- |
-   | any file under `src/`                              | `.claude/rules/architecture.md`          |
-   | `src/server/**`, `src/app/api/**`, `scripts/**`    | `.claude/rules/backend.md`               |
-   | `src/server/db/**`                                 | `.claude/rules/migrations.md`            |
-   | `src/server/imports/**`, `scripts/**`              | `.claude/rules/imports.md`               |
-   | `src/{app,views,widgets,features,entities,shared}` | `.claude/rules/frontend.md`              |
-   | `*.css`                                            | `.claude/rules/styling.md`               |
-   | `*.tsx`, `*.css`                                   | `.claude/rules/accessibility.md`         |
-   | `*.test.ts`, `*.test.tsx`                          | `.claude/rules/testing.md`               |
-   | API calls, saves, Route Handlers, error states     | `.claude/skills/error-handling/SKILL.md` |
+1. **Load the rules.** Read `.claude/CLAUDE.md`. Then read each file in `.claude/rules/` whose
+   `paths` frontmatter matches a file in the diff. When the diff touches API calls, saves, Route
+   Handlers or error states, also read `.claude/skills/error-handling/SKILL.md`.
 
 2. **Collect facts.** Run `bash .claude/skills/let-code-review/scripts/checks.sh` once. Keep its
    output as is. These are facts; everything you think about the diff is a suspicion until step 4.
 
 3. **List suspicions.** Go through the diff hunk by hunk against the loaded rules. Write each
-   suspicion with the rule it may break. Look hardest at the rules that always apply in
-   `CLAUDE.md`: city isolation in SQL, no hard-coded city or time zone, no email or coordinates of
-   another player, `server/` not imported by client code, schema only through migrations, Zod at
-   every boundary, no TypeScript escape hatches, and a test for changed behaviour.
+   suspicion with the rule it may break. Look hardest at "Rules that always apply" in `CLAUDE.md`,
+   the escape hatches in `code-style.md`, and a test for every changed behaviour.
 
 4. **Verify each suspicion.** For every suspicion, name the innocent explanation (handled by a
    caller, filtered elsewhere, covered by a test, allowed by an exception in the rules) and check

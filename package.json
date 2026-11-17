@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/prepare-build-db.mjs",
     "build": "next build",
     "start": "next start",
     "realtime": "tsx --tsconfig scripts/tsconfig.realtime.json scripts/realtime.ts",

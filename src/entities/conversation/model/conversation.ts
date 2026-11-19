@@ -67,6 +67,8 @@ export const chatPartnerSchema = z.object({
   name: z.string().min(1),
   initials: z.string().min(1),
   subtitle: z.string().min(1),
+  /** The account was deleted. The history stays, but nothing can be sent. */
+  isDeleted: z.boolean().optional(),
 });
 export type ChatPartner = Readonly<z.infer<typeof chatPartnerSchema>>;
 

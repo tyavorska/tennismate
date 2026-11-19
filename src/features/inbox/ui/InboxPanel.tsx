@@ -271,6 +271,7 @@ function Thread({
   const respond = useRespondToInvite();
   const markRead = useMarkRead();
   const isOnline = useIsOnline(partner.id);
+  const isDeleted = (conversation?.partner ?? partner).isDeleted === true;
   const loaded = messages.data ?? [];
   const unreadCount = conversation?.unreadCount ?? 0;
   const conversationId = conversation?.id;
@@ -287,7 +288,7 @@ function Thread({
   // A repeat of a failed send keeps its id, so the server never saves it twice.
   function submit(text: string, onSent: () => void, invite?: NewInvite): void {
     const trimmed = text.trim();
-    if (trimmed === '') return;
+    if (trimmed === '' || isDeleted) return;
     const clientMessageId =
       attempt.current?.text === trimmed ? attempt.current.clientMessageId : crypto.randomUUID();
     attempt.current = { text: trimmed, clientMessageId };
@@ -318,11 +319,15 @@ function Thread({
         >
           <Icon name="arrowLeft" strokeWidth={2.4} />
         </Button>
-        <Avatar initials={partner.initials} online={isOnline} className={styles.threadAvatar} />
+        <Avatar
+          initials={(conversation?.partner ?? partner).initials}
+          online={isOnline}
+          className={styles.threadAvatar}
+        />
         <div className={styles.who}>
-          <h2 className={styles.whoName}>{partner.name}</h2>
+          <h2 className={styles.whoName}>{(conversation?.partner ?? partner).name}</h2>
           <p className={styles.whoSub}>
-            {partner.subtitle}
+            {(conversation?.partner ?? partner).subtitle}
             {isOnline && ' · Online'}
           </p>
         </div>
@@ -339,12 +344,13 @@ function Thread({
           variant="solid"
           className={styles.propose}
           aria-expanded={isInviting}
+          isDisabled={isDeleted}
           onPress={() => onInvitingChange(!isInviting)}
         >
           Propose a court
         </Button>
       </div>
-      {isInviting && (
+      {isInviting && !isDeleted && (
         <InviteForm
           timeZone={viewer.timezone}
           onSend={(invite) =>
@@ -417,7 +423,7 @@ function Thread({
             <Button
               variant="outline"
               className={styles.chip}
-              isDisabled={send.isPending}
+              isDisabled={send.isPending || isDeleted}
               onPress={() => submit(reply, () => undefined)}
             >
               {reply}
@@ -426,19 +432,35 @@ function Thread({
         ))}
       </ul>
 
+      {isDeleted && (
+        <p role="status" className={styles.deletedNotice}>
+          This account was deleted. You can read the conversation, but you can no longer send
+          messages.
+        </p>
+      )}
+
       <form className={styles.compose} onSubmit={submitDraft}>
         <TextField
           value={draft}
           onChange={setDraft}
           autoComplete="off"
+          isDisabled={isDeleted}
           className={styles.composeField}
         >
           <Label>
             <VisuallyHidden>Message</VisuallyHidden>
           </Label>
-          <Input className={styles.composeInput} placeholder="Write a message…" />
+          <Input
+            className={styles.composeInput}
+            placeholder={isDeleted ? 'Messaging is turned off' : 'Write a message…'}
+          />
         </TextField>
-        <Button type="submit" className={styles.send} aria-label="Send" isDisabled={send.isPending}>
+        <Button
+          type="submit"
+          className={styles.send}
+          aria-label="Send"
+          isDisabled={send.isPending || isDeleted}
+        >
           <Icon name="send" strokeWidth={2.4} />
         </Button>
       </form>

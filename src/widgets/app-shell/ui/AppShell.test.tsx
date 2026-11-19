@@ -321,6 +321,61 @@ describe('AppShell', () => {
       expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument();
     });
 
+    describe('a conversation with a deleted account', () => {
+      const lastWords = message(5, 3, 'them', 'See you at the club');
+      const gone = conversationSchema.parse({
+        ...conversation(3, 'Deleted player', lastWords, 0),
+        partner: {
+          id: uuid(53),
+          name: 'Deleted player',
+          initials: '?',
+          subtitle: 'Account deleted',
+          isDeleted: true,
+        },
+      });
+
+      async function openGone(): Promise<ReturnType<typeof userEvent.setup>> {
+        const client = createTestQueryClient();
+        client.setQueryData(conversationQueries.list().queryKey, [gone]);
+        client.setQueryData(conversationQueries.messages(gone.id).queryKey, [lastWords]);
+        renderShell(client);
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /Messages/ }));
+        await user.click(await screen.findByRole('button', { name: /Deleted player/ }));
+        return user;
+      }
+
+      it('keeps the history and says the account was deleted', async () => {
+        await openGone();
+
+        expect(await screen.findByText('See you at the club')).toBeInTheDocument();
+        expect(screen.getByText('Account deleted')).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: '' })).toHaveTextContent(
+          'This account was deleted',
+        );
+      });
+
+      it('turns off the box, Send, quick replies and Propose a court', async () => {
+        await openGone();
+        await screen.findByText('See you at the club');
+
+        expect(screen.getByRole('textbox', { name: 'Message' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Sounds good' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Propose a court' })).toBeDisabled();
+      });
+
+      it('sends nothing when a quick reply is pressed anyway', async () => {
+        onSend.mockClear();
+        const user = await openGone();
+        await screen.findByText('See you at the club');
+
+        await user.click(screen.getByRole('button', { name: 'Sounds good' }));
+
+        expect(onSend).not.toHaveBeenCalled();
+      });
+    });
+
     it('sends a reply, shows it in the thread and clears the box', async () => {
       onSend.mockImplementation((payload, acknowledge) => acknowledge(accepted(payload)));
       renderShell();

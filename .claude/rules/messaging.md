@@ -58,6 +58,12 @@ file says what is built and the decisions that hold the code together.
 - **`expired` is never stored.** A pending invite whose time has passed is read as expired.
 - **Same city only.** The recipient must be in the sender's city, and a conversation whose other
   player has moved cities disappears from both lists. Both answer `notFound`.
+- **A deleted account stays as a tombstone.** Deleting removes the profile, hosted games, saved
+  players and sessions, and cancels open invites, but keeps the `users` row (`deleted_at`, no
+  email, hash `!`) so conversations keep their history. The partner is shown as "Deleted player"
+  (`partner.isDeleted`), the thread says so, and sending is off in the UI. The server refuses a send
+  to a deleted account with `conflict`, and a conversation with one stays visible without a city
+  check. A tab that is still open cannot send either, because it has no profile.
 - **A bad send answers on the acknowledgement**, as `{ ok: false, problem }` with a `Problem` from
   `shared/api`. It never throws into the socket. A send over the rate limit answers `rateLimited`.
 - **Every payload is parsed with Zod on both sides.** Schemas live in

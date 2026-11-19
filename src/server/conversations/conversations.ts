@@ -24,6 +24,7 @@ import { requireProfile } from '../profiles';
 const threadPageSize = 50;
 const catchUpLimit = 200;
 const maxInviteDays = 60;
+const deletedPlayerName = 'Deleted player';
 const acceptedReply = 'Accepted! See you on court 🎾';
 
 const messageRowSchema = z.object({
@@ -82,9 +83,9 @@ function toInviteFields(row: MessageRow, timeZone: string): z.core.util.JSONType
 
 const summaryRowSchema = messageRowSchema.extend({
   partner_id: z.string(),
-  partner_name: z.string(),
-  partner_rating: z.number(),
-  partner_district: z.string(),
+  partner_name: z.string().nullable(),
+  partner_rating: z.number().nullable(),
+  partner_district: z.string().nullable(),
   timezone: z.string(),
   plan_court: z.string().nullable(),
   plan_starts_at: z.string().nullable(),
@@ -92,8 +93,9 @@ const summaryRowSchema = messageRowSchema.extend({
 });
 
 // A conversation with someone outside the viewer's city looks the same as one that does not exist.
+// A deleted partner has no profile and no city, so the conversation stays for its history.
 const summarySelect = `
-  SELECT conversations.id AS conversation_id, partner.user_id AS partner_id,
+  SELECT conversations.id AS conversation_id, partner_user.id AS partner_id,
          partner.name AS partner_name, partner.rating AS partner_rating,
          districts.name AS partner_district, cities.timezone AS timezone,
          last.id, last.sender_id, last.client_message_id, last.body, last.created_at,
@@ -111,12 +113,13 @@ const summarySelect = `
             AND (read_up_to.id IS NULL OR unread.rowid > read_up_to.rowid))
            AS unread_count
   FROM conversations
-  JOIN profiles AS partner
-    ON partner.user_id = CASE WHEN conversations.user_a = $viewer
+  JOIN users AS partner_user
+    ON partner_user.id = CASE WHEN conversations.user_a = $viewer
                               THEN conversations.user_b ELSE conversations.user_a END
+  LEFT JOIN profiles AS partner ON partner.user_id = partner_user.id
   JOIN profiles AS viewer_profile ON viewer_profile.user_id = $viewer
   JOIN cities ON cities.id = viewer_profile.city_id
-  JOIN districts ON districts.id = partner.district_id
+  LEFT JOIN districts ON districts.id = partner.district_id
   JOIN conversation_members AS member
     ON member.conversation_id = conversations.id AND member.user_id = $viewer
   LEFT JOIN messages AS read_up_to ON read_up_to.id = member.last_read_message_id
@@ -124,7 +127,25 @@ const summarySelect = `
     SELECT id FROM messages WHERE conversation_id = conversations.id
     ORDER BY rowid DESC LIMIT 1)
   WHERE (conversations.user_a = $viewer OR conversations.user_b = $viewer)
-    AND partner.city_id = viewer_profile.city_id`;
+    AND (partner.city_id = viewer_profile.city_id OR partner_user.deleted_at IS NOT NULL)`;
+
+function toPartner(row: z.infer<typeof summaryRowSchema>): Conversation['partner'] {
+  if (row.partner_name === null || row.partner_rating === null || row.partner_district === null) {
+    return {
+      id: row.partner_id,
+      name: deletedPlayerName,
+      initials: '?',
+      subtitle: 'Account deleted',
+      isDeleted: true,
+    };
+  }
+  return {
+    id: row.partner_id,
+    name: row.partner_name,
+    initials: initialsOf(row.partner_name),
+    subtitle: `NTRP ${formatRating(row.partner_rating)} · ${row.partner_district}`,
+  };
+}
 
 function toConversation(row: z.infer<typeof summaryRowSchema>): Conversation {
   const plan =
@@ -133,12 +154,7 @@ function toConversation(row: z.infer<typeof summaryRowSchema>): Conversation {
       : { court: row.plan_court, ...toWallClock(new Date(row.plan_starts_at), row.timezone) };
   return conversationSchema.parse({
     id: row.conversation_id,
-    partner: {
-      id: row.partner_id,
-      name: row.partner_name,
-      initials: initialsOf(row.partner_name),
-      subtitle: `NTRP ${formatRating(row.partner_rating)} · ${row.partner_district}`,
-    },
+    partner: toPartner(row),
     lastMessage: toMessage(row, row.timezone),
     plan,
     unreadCount: row.unread_count,
@@ -362,6 +378,12 @@ export function sendMessage(
   const { city } = requireProfile(user);
   if (recipientId === user.id) {
     throw new DomainError('validation', { message: 'You cannot message yourself.' });
+  }
+  const recipientRow = db.prepare('SELECT deleted_at FROM users WHERE id = ?').get(recipientId);
+  if (recipientRow !== undefined && recipientRow.deleted_at !== null) {
+    throw new DomainError('conflict', {
+      message: 'This account was deleted, so you can no longer send messages.',
+    });
   }
   const recipient = db
     .prepare('SELECT 1 AS found FROM profiles WHERE user_id = ? AND city_id = ?')

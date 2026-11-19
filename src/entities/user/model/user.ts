@@ -28,6 +28,12 @@ export const signInCredentialsSchema = z.object({
   password: z.string().min(1, 'Enter your password').max(128, 'Password is too long'),
 });
 
+/** Deleting an account asks for the password again, so a stolen session cannot do it. */
+export const deleteAccountRequestSchema = z.object({
+  password: z.string().min(1, 'Enter your password').max(128, 'Password is too long'),
+});
+export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;
+
 export const userIdSchema = z.uuid().brand<'UserId'>();
 export type UserId = z.infer<typeof userIdSchema>;
 

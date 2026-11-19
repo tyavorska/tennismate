@@ -1,5 +1,6 @@
 /** Page paths. Every redirect, link and guard reads from here, never from a literal. */
 export const routes = {
+  landing: '/',
   home: '/home',
   players: '/players',
   calendar: '/calendar',

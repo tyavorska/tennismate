@@ -314,6 +314,22 @@ describe('migrate', () => {
     });
   });
 
+  describe('deleted users', () => {
+    it('adds deleted_at and leaves existing users active', () => {
+      const database = openDatabase();
+      migrate(database, migrations.slice(0, 7));
+      database.exec(
+        "INSERT INTO users (id, email, password_hash, created_at) VALUES ('u1', 'a@example.com', 'x', 'now')",
+      );
+
+      migrate(database);
+
+      expect(database.prepare('SELECT deleted_at FROM users WHERE id = ?').get('u1')).toEqual({
+        deleted_at: null,
+      });
+    });
+  });
+
   describe('when a migration fails', () => {
     const failing: Migration = {
       version: 2,

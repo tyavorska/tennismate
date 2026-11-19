@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import type { ApiError } from '@/shared/api';
+import { routes } from '@/shared/config';
 import { signOut } from '../api/signOutApi';
 
 export function useSignOut(): UseMutationResult<undefined, ApiError, void> {
@@ -14,7 +15,7 @@ export function useSignOut(): UseMutationResult<undefined, ApiError, void> {
     onSuccess: () => {
       // Drop every cached query so the next user never sees this user's data.
       queryClient.clear();
-      router.replace('/');
+      router.replace(routes.landing);
       router.refresh();
     },
   });

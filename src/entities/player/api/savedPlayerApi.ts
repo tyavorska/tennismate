@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { apiFetch } from '@/shared/api';
+import { apiRoutes } from '@/shared/config';
 
 export const savedPlayerApi = {
   list: (): Promise<readonly string[]> =>
-    apiFetch('/api/me/saved-players', { schema: z.array(z.string()) }),
+    apiFetch(apiRoutes.savedPlayers, { schema: z.array(z.string()) }),
   save: (id: string): Promise<undefined> =>
-    apiFetch(`/api/me/saved-players/${id}`, { method: 'PUT', schema: z.undefined() }),
+    apiFetch(apiRoutes.savedPlayer(id), { method: 'PUT', schema: z.undefined() }),
   remove: (id: string): Promise<undefined> =>
-    apiFetch(`/api/me/saved-players/${id}`, { method: 'DELETE', schema: z.undefined() }),
+    apiFetch(apiRoutes.savedPlayer(id), { method: 'DELETE', schema: z.undefined() }),
 };

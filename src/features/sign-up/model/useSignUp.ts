@@ -4,6 +4,7 @@ import { signUpRequestSchema, type User } from '@/entities/user';
 import { ApiError } from '@/shared/api';
 import { signUp } from '../api/signUpApi';
 import type { SignUpInput } from './signUpSchema';
+import { routes } from '@/shared/config';
 
 export function useSignUp(): UseMutationResult<User, ApiError, SignUpInput> {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function useSignUp(): UseMutationResult<User, ApiError, SignUpInput> {
       return signUp(request.data);
     },
     onSuccess: () => {
-      router.replace('/players');
+      router.replace(routes.players);
       router.refresh();
     },
   });

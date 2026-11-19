@@ -4,6 +4,7 @@ import { firstNameOf, initialsOf, type Player } from '@/entities/player';
 import { useSignOut } from '@/features/sign-out';
 import { FormAlert, Icon, Menu, MenuItem } from '@/shared/ui';
 import styles from './AccountMenu.module.css';
+import { routes } from '@/shared/config';
 
 type AccountMenuProps = {
   viewer: Player;
@@ -25,7 +26,7 @@ export function AccountMenu({ viewer }: AccountMenuProps) {
           </>
         }
       >
-        <MenuItem href="/profile" textValue="Profile settings">
+        <MenuItem href={routes.profile} textValue="Profile settings">
           <Icon name="user" className={styles.itemIcon} />
           Profile settings
         </MenuItem>

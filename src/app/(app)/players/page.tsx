@@ -8,15 +8,16 @@ import { listOpenGames } from '@/server/games';
 import { listPlayers, listSavedPlayerIds } from '@/server/players';
 import { getProfile } from '@/server/profiles';
 import { PlayersPage } from '@/views/players';
+import { routes } from '@/shared/config';
 
 export const metadata: Metadata = { title: 'Players | Let.' };
 
 export default async function Page() {
   const user = await getCurrentUser();
-  if (user === undefined) redirect('/sign-in');
+  if (user === undefined) redirect(routes.signIn);
 
   const viewer = getProfile(user);
-  if (viewer === undefined) redirect('/choose-city');
+  if (viewer === undefined) redirect(routes.chooseCity);
 
   // Games and saved players change on the client, so they go through the query cache.
   const queryClient = new QueryClient();

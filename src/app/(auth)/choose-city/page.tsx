@@ -4,14 +4,15 @@ import { getCurrentUser } from '@/server/auth';
 import { listCities } from '@/server/cities';
 import { getProfile } from '@/server/profiles';
 import { ChooseCityPage } from '@/views/choose-city';
+import { routes } from '@/shared/config';
 
 export const metadata: Metadata = { title: 'Choose your city | Let.' };
 
 export default async function Page() {
   const user = await getCurrentUser();
-  if (user === undefined) redirect('/sign-in');
+  if (user === undefined) redirect(routes.signIn);
   // A player who already has a city has nothing to choose here.
-  if (getProfile(user) !== undefined) redirect('/players');
+  if (getProfile(user) !== undefined) redirect(routes.players);
 
   return <ChooseCityPage cities={listCities()} />;
 }

@@ -6,6 +6,7 @@ import { ButtonLink, LogoLink } from '@/shared/ui';
 import { AccountMenu } from './AccountMenu';
 import { NavLink } from './NavLink';
 import styles from './AppShell.module.css';
+import { routes } from '@/shared/config';
 
 type AppShellProps = {
   viewer: Player;
@@ -19,7 +20,7 @@ export function AppShell({ viewer, children }: AppShellProps) {
         <header className={styles.header}>
           <div className={styles.bar}>
             <div className={styles.brand}>
-              <LogoLink href="/players" className={styles.logo} />
+              <LogoLink href={routes.players} className={styles.logo} />
               <p className={styles.city}>
                 <span className={styles.cityDot} aria-hidden="true" />
                 {viewer.city.name}
@@ -29,13 +30,13 @@ export function AppShell({ viewer, children }: AppShellProps) {
             <nav className={styles.nav} aria-label="Main">
               <ul className={styles.navList}>
                 {/* <li>
-                  <NavLink href="/home">Home</NavLink>
+                  <NavLink href={routes.home}>Home</NavLink>
                 </li> */}
                 <li>
-                  <NavLink href="/players">Players</NavLink>
+                  <NavLink href={routes.players}>Players</NavLink>
                 </li>
                 <li>
-                  <NavLink href="/calendar">My calendar</NavLink>
+                  <NavLink href={routes.calendar}>My calendar</NavLink>
                 </li>
               </ul>
             </nav>

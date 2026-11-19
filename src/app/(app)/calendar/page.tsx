@@ -9,6 +9,7 @@ import { getProfile } from '@/server/profiles';
 import { todayIn } from '@/shared/lib';
 import { CalendarPage } from '@/views/calendar';
 import { isoDateSchema, visibleRange, weekOffsetFor } from '@/widgets/month-calendar';
+import { routes } from '@/shared/config';
 
 export const metadata: Metadata = { title: 'My calendar | Let.' };
 
@@ -16,9 +17,9 @@ const searchParamsSchema = z.object({ day: z.string().optional() });
 
 export default async function Page(props: PageProps<'/calendar'>) {
   const user = await getCurrentUser();
-  if (user === undefined) redirect('/sign-in');
+  if (user === undefined) redirect(routes.signIn);
   const viewer = getProfile(user);
-  if (viewer === undefined) redirect('/choose-city');
+  if (viewer === undefined) redirect(routes.chooseCity);
 
   const { day } = searchParamsSchema.catch({}).parse(await props.searchParams);
   const today = todayIn(new Date(), viewer.city.timezone);

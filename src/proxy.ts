@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { protectedPaths, sessionCookieName } from '@/shared/config';
+import { protectedPaths, routes, sessionCookieName } from '@/shared/config';
 
 // Only checks that a cookie exists. getCurrentUser decides whether it is valid.
 export function proxy(request: NextRequest): NextResponse {
@@ -9,7 +9,7 @@ export function proxy(request: NextRequest): NextResponse {
   );
   if (!isProtected || request.cookies.has(sessionCookieName)) return NextResponse.next();
 
-  const signInUrl = new URL('/sign-in', request.nextUrl);
+  const signInUrl = new URL(routes.signIn, request.nextUrl);
   signInUrl.searchParams.set('returnTo', `${pathname}${search}`);
   return NextResponse.redirect(signInUrl);
 }

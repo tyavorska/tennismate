@@ -4,6 +4,7 @@ import { newProfileSchema, type Player } from '@/entities/player';
 import { ApiError } from '@/shared/api';
 import { chooseCity } from '../api/chooseCityApi';
 import type { ChooseCityInput } from './chooseCitySchema';
+import { routes } from '@/shared/config';
 
 export function useChooseCity(): UseMutationResult<Player, ApiError, ChooseCityInput> {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function useChooseCity(): UseMutationResult<Player, ApiError, ChooseCityI
       return chooseCity(profile.data);
     },
     onSuccess: () => {
-      router.replace('/players');
+      router.replace(routes.players);
       router.refresh();
     },
   });

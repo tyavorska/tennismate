@@ -1,9 +1,11 @@
+import { routes } from './routes';
+
 export const sessionCookieName = 'session';
 
 export const protectedPaths = [
-  '/home',
-  '/players',
-  '/calendar',
-  '/profile',
-  '/choose-city',
+  routes.home,
+  routes.players,
+  routes.calendar,
+  routes.profile,
+  routes.chooseCity,
 ] as const;

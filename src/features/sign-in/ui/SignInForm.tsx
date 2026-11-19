@@ -9,6 +9,7 @@ import { Button, FormAlert, FormTextField, SocialAuth } from '@/shared/ui';
 import { signInDefaults, signInSchema, type SignInInput } from '../model/signInSchema';
 import { useSignIn } from '../model/useSignIn';
 import styles from './SignInForm.module.css';
+import { routes } from '@/shared/config';
 
 type SignInFormProps = {
   /** 1 when the form is the page's main content, 2 when it sits inside a labelled dialog. */
@@ -63,7 +64,7 @@ export function SignInForm({ headingLevel = 2, onSwitch, returnTo }: SignInFormP
           placeholder="Your password"
         />
 
-        <Link href="/forgot-password" className={styles.forgot}>
+        <Link href={routes.forgotPassword} className={styles.forgot}>
           Forgot password?
         </Link>
 
@@ -81,7 +82,7 @@ export function SignInForm({ headingLevel = 2, onSwitch, returnTo }: SignInFormP
       <p className={styles.note}>
         New to Let.?{' '}
         {onSwitch === undefined ? (
-          <Link href="/sign-up" replace className={styles.link}>
+          <Link href={routes.signUp} replace className={styles.link}>
             Create a free account
           </Link>
         ) : (

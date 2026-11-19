@@ -6,6 +6,7 @@ import { HeroAuthCard } from './HeroAuthCard';
 import { HeroStage } from './HeroStage';
 import { HomeIcon, type HomeIconName } from './HomeIcons';
 import styles from './HomePage.module.css';
+import { routes } from '@/shared/config';
 
 const features = [
   {
@@ -65,7 +66,7 @@ const stats = [
 
 export async function HomePage() {
   // Signed-in players start on their dashboard.
-  if ((await getCurrentUser()) !== undefined) redirect('/players');
+  if ((await getCurrentUser()) !== undefined) redirect(routes.players);
 
   return (
     <main>

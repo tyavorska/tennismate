@@ -18,6 +18,7 @@ import {
 import { signUpDefaults, signUpSchema, type SignUpInput } from '../model/signUpSchema';
 import { useSignUp } from '../model/useSignUp';
 import styles from './SignUpForm.module.css';
+import { routes } from '@/shared/config';
 
 const fields = ['email', 'password', 'cityId'] as const;
 
@@ -173,7 +174,7 @@ export function SignUpForm({
       <p className={styles.note}>
         Already a member?{' '}
         {onSwitch === undefined ? (
-          <Link href="/sign-in" replace className={styles.link}>
+          <Link href={routes.signIn} replace className={styles.link}>
             Log in
           </Link>
         ) : (

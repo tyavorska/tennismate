@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiFetch } from '@/shared/api';
+import { apiRoutes } from '@/shared/config';
 
 export function signOut(): Promise<undefined> {
-  return apiFetch('/api/auth/sign-out', { method: 'POST', schema: z.undefined() });
+  return apiFetch(apiRoutes.signOut, { method: 'POST', schema: z.undefined() });
 }

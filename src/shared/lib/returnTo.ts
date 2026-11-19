@@ -1,4 +1,6 @@
-const fallbackPath = '/players';
+import { defaultLandingPath } from '../config/routes';
+
+const fallbackPath = defaultLandingPath;
 
 // Only same-site paths, so `?returnTo=//evil.example` cannot send the user off the site.
 export function safeReturnTo(value: string | null | undefined): string {

@@ -1,0 +1,7 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}

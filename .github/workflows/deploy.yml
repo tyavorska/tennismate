@@ -42,6 +42,7 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
           build-args: |
             NEXT_PUBLIC_REALTIME_URL=https://${{ vars.DOMAIN }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.SENTRY_DSN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -69,13 +70,14 @@ jobs:
         env:
           IMAGE: ${{ needs.image.outputs.image }}
           DOMAIN: ${{ vars.DOMAIN }}
+          SENTRY_DSN: ${{ vars.SENTRY_DSN }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "cd ~/let && echo '$REGISTRY_TOKEN' | docker login ghcr.io -u '$REGISTRY_USER' --password-stdin \
-             && IMAGE='$IMAGE' DOMAIN='$DOMAIN' docker compose pull \
-             && IMAGE='$IMAGE' DOMAIN='$DOMAIN' docker compose up -d --remove-orphans \
+             && IMAGE='$IMAGE' DOMAIN='$DOMAIN' SENTRY_DSN='$SENTRY_DSN' docker compose pull \
+             && IMAGE='$IMAGE' DOMAIN='$DOMAIN' SENTRY_DSN='$SENTRY_DSN' docker compose up -d --remove-orphans \
              && docker image prune -f"
       - name: Check the site is healthy
         run: curl --fail --retry 10 --retry-delay 5 --retry-all-errors https://${{ vars.DOMAIN }}/api/health

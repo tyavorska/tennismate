@@ -6,6 +6,7 @@ x-app: &app
   environment:
     DATABASE_PATH: /app/data/tennismate.db
     REALTIME_ALLOWED_ORIGIN: https://${DOMAIN}
+    NEXT_PUBLIC_SENTRY_DSN: ${SENTRY_DSN:-}
   volumes:
     - app-data:/app/data
 
@@ -33,6 +34,7 @@ services:
       DATABASE_PATH: /app/data/tennismate.db
       REALTIME_ALLOWED_ORIGIN: https://${DOMAIN}
       REALTIME_PORT: '4000'
+      NEXT_PUBLIC_SENTRY_DSN: ${SENTRY_DSN:-}
 
   caddy:
     image: caddy:2

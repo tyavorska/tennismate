@@ -2,6 +2,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { errorPolicy, type Problem } from '@/shared/api';
 import { DomainError } from '../http';
+import { reportError } from '../monitoring';
 
 /**
  * The answer for a failed event. A domain error is expected and passes through. Anything else is
@@ -23,5 +24,6 @@ export function toProblem(error: Error | string, operation: string): Problem {
       detail: error instanceof Error ? error.message : error,
     }),
   );
+  reportError(error, operation, requestId);
   return { kind: 'server', requestId };
 }

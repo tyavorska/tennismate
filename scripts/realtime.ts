@@ -5,7 +5,10 @@
  */
 import { createServer } from 'node:http';
 import { serverEnv } from '@/server/config/env';
+import { initMonitoring } from '@/server/monitoring';
 import { createRealtimeServer } from '@/server/realtime';
+
+initMonitoring();
 
 const httpServer = createServer((_request, response) => {
   response.writeHead(404).end();

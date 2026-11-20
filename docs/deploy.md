@@ -21,12 +21,13 @@ push to main → ci.yml (lint, typecheck, format, test, build)
 
 Settings → Environments → New environment `production` (add yourself as a required reviewer).
 
-| Where                | Name       | Value                              |
-| -------------------- | ---------- | ---------------------------------- |
-| Environment variable | `DOMAIN`   | `let.example.com`                  |
-| Environment secret   | `SSH_HOST` | The server's public IP or hostname |
-| Environment secret   | `SSH_USER` | `ubuntu`                           |
-| Environment secret   | `SSH_KEY`  | The private deploy key, whole file |
+| Where                | Name         | Value                                    |
+| -------------------- | ------------ | ---------------------------------------- |
+| Environment variable | `DOMAIN`     | `let.example.com`                        |
+| Environment variable | `SENTRY_DSN` | The DSN of the Sentry project (optional) |
+| Environment secret   | `SSH_HOST`   | The server's public IP or hostname       |
+| Environment secret   | `SSH_USER`   | `ubuntu`                                 |
+| Environment secret   | `SSH_KEY`    | The private deploy key, whole file       |
 
 Settings → Branches → protect `main` and require the `checks` status check.
 

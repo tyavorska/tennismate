@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import type { z } from 'zod';
 import { errorPolicy, type ErrorKind, type Problem } from '@/shared/api';
+import { reportError } from '../monitoring';
 
 type ProblemOptions = Readonly<{
   message?: string;
@@ -39,6 +40,7 @@ export function unexpectedProblem(operation: string, error: Error | string): Nex
   const requestId = randomUUID();
   const detail = error instanceof Error ? error.message : error;
   console.error(JSON.stringify({ level: 'error', kind: 'server', operation, requestId, detail }));
+  reportError(error, operation, requestId);
   return problem('server', { requestId });
 }
 

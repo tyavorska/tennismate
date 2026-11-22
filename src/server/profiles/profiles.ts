@@ -21,14 +21,18 @@ const profileRowSchema = z.object({
 
 const districtRowSchema = z.object({ id: z.number(), latitude: z.number(), longitude: z.number() });
 
+const fallbackName = 'New Player';
+
 /** "ana.smith@example.com" becomes "Ana Smith". */
 function nameFromEmail(email: string): string {
   const localPart = email.split('@')[0] ?? email;
-  return localPart
+  const name = localPart
     .split(/[._+-]+/)
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+  // "_@example.com" has no words, and a profile with an empty name cannot be listed.
+  return name === '' ? fallbackName : name;
 }
 
 function toPlayer(row: z.infer<typeof profileRowSchema>): Player {

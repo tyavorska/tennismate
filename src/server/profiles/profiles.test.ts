@@ -32,6 +32,12 @@ describe('createProfile', () => {
     });
   });
 
+  it('names the profile "New Player" when the email has no letters to make a name from', async () => {
+    const user = await createUser({ email: '_@example.com', password: 'serve-and-volley' });
+
+    expect(createProfile(user, krakowId()).name).toBe('New Player');
+  });
+
   it('starts the profile in another city when that one is chosen', async () => {
     const user = await createUser({ email: 'gd@example.com', password: 'serve-and-volley' });
 

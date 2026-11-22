@@ -22,6 +22,13 @@ describe('formatListTime', () => {
     expect(formatListTime('2026-10-30T10:00:00.000Z', warsaw, now)).toBe('30 Oct');
   });
 
+  it('says Yesterday just after midnight when yesterday had 23 hours', () => {
+    // The clocks in Kraków went forward on 29 March. It is 00:15 on the 30th.
+    const afterShortDay = new Date('2026-03-29T22:15:00.000Z');
+
+    expect(formatListTime('2026-03-29T10:00:00.000Z', warsaw, afterShortDay)).toBe('Yesterday');
+  });
+
   it('counts the day in the city, not in UTC', () => {
     expect(
       formatListTime('2026-11-10T23:30:00.000Z', warsaw, new Date('2026-11-11T08:00:00.000Z')),

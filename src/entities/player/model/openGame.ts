@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { clockTimeSchema } from '@/shared/lib';
 import { ntrpRatingSchema } from './player';
 
 export const gameDaySchema = z.enum(['Today', 'Tomorrow', 'Sat', 'Sun']);
@@ -14,7 +15,7 @@ export const openGameSchema = z.object({
   rating: ntrpRatingSchema,
   format: gameFormatSchema,
   day: gameDaySchema,
-  time: z.string().regex(/^\d{2}:\d{2}$/),
+  time: clockTimeSchema,
   court: z.string().min(1),
   district: z.string().min(1),
   spotsOpen: z.number().int().nonnegative(),

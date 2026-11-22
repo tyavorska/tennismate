@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { calendarDateSchema, clockTimeSchema } from '@/shared/lib';
 
 export const maxMessageLength = 2000;
 
@@ -8,14 +9,11 @@ export const messageTextSchema = z
   .min(1, 'Write a message')
   .max(maxMessageLength, `Messages are at most ${maxMessageLength} characters`);
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const timeSchema = z.string().regex(/^\d{2}:\d{2}$/);
-
 /** What a player proposes: a court of their city, a day and a time there. */
 export const newInviteSchema = z.object({
   court: z.string().trim().min(1).max(100),
-  date: dateSchema,
-  time: timeSchema,
+  date: calendarDateSchema,
+  time: clockTimeSchema,
 });
 export type NewInvite = z.infer<typeof newInviteSchema>;
 
@@ -35,8 +33,8 @@ export const inviteSchema = z.object({
   status: inviteStatusSchema,
   proposerId: z.uuid(),
   court: z.string().min(1),
-  date: dateSchema,
-  time: timeSchema,
+  date: calendarDateSchema,
+  time: clockTimeSchema,
   startsAt: z.iso.datetime(),
 });
 export type Invite = Readonly<z.infer<typeof inviteSchema>>;
@@ -44,8 +42,8 @@ export type Invite = Readonly<z.infer<typeof inviteSchema>>;
 /** The next game the two players have agreed on. */
 export const planSchema = z.object({
   court: z.string().min(1),
-  date: dateSchema,
-  time: timeSchema,
+  date: calendarDateSchema,
+  time: clockTimeSchema,
 });
 export type Plan = Readonly<z.infer<typeof planSchema>>;
 

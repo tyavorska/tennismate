@@ -1,14 +1,12 @@
 import { z } from 'zod';
-import { isoDateSchema } from '@/shared/lib';
-
-const timeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+import { clockTimeSchema, isoDateSchema } from '@/shared/lib';
 
 export const calendarEventSchema = z.discriminatedUnion('kind', [
   z.object({
     id: z.string().min(1),
     kind: z.literal('game'),
     date: isoDateSchema,
-    time: timeSchema,
+    time: clockTimeSchema,
     title: z.string().min(1),
     court: z.string().min(1),
     confirmed: z.boolean(),
@@ -24,7 +22,7 @@ export const calendarEventSchema = z.discriminatedUnion('kind', [
     id: z.string().min(1),
     kind: z.literal('open'),
     date: isoDateSchema,
-    time: timeSchema,
+    time: clockTimeSchema,
     host: z.string().min(1),
     court: z.string().min(1),
     format: z.string().min(1),

@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { addDays, isoDateSchema } from './isoDate';
-import { nextWeekday, todayIn, toWallClock, zonedToUtc } from './zonedTime';
+import { endOfDayUtc, nextWeekday, todayIn, toWallClock, zonedToUtc } from './zonedTime';
 
 const date = (iso: string) => isoDateSchema.parse(iso);
 const warsaw = 'Europe/Warsaw';
+
+describe('endOfDayUtc', () => {
+  it('is local midnight at the start of the next day, on a 25-hour day too', () => {
+    expect(endOfDayUtc(date('2026-10-25'), warsaw).toISOString()).toBe('2026-10-25T23:00:00.000Z');
+    expect(endOfDayUtc(date('2026-07-01'), warsaw).toISOString()).toBe('2026-07-01T22:00:00.000Z');
+  });
+});
 
 describe('zonedToUtc', () => {
   it('uses UTC+1 in Kraków in winter', () => {

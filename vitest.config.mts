@@ -14,7 +14,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/shared/testing/setup.ts'],
-    env: { DATABASE_PATH: ':memory:' },
+    env: { DATABASE_PATH: ':memory:', TZ: 'UTC' },
     css: { modules: { classNameStrategy: 'non-scoped' } },
   },
 });

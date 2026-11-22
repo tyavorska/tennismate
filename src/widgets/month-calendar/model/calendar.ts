@@ -1,6 +1,13 @@
 import { calendarEventSchema } from '@/entities/game';
 import type { CalendarEvent } from '@/entities/game';
-import { addDays, isoDateSchema, toUtc, weekdayIndex, type IsoDate } from '@/shared/lib';
+import {
+  addDays,
+  daysBetween,
+  isoDateSchema,
+  toPlainDate,
+  weekdayIndex,
+  type IsoDate,
+} from '@/shared/lib';
 
 export { addDays, calendarEventSchema, isoDateSchema, weekdayIndex };
 export type { CalendarEvent, IsoDate };
@@ -38,13 +45,12 @@ const weekdayLongNames = [
   'Sunday',
 ] as const;
 
-const dayMs = 86_400_000;
 const daysShown = 35;
 
 /** The week offset that brings a day into view: 0 when it is already within the five weeks shown. */
 export function weekOffsetFor(todayIso: IsoDate, iso: IsoDate): number {
   const start = addDays(todayIso, -weekdayIndex(todayIso));
-  const diff = Math.round((toUtc(iso).getTime() - toUtc(start).getTime()) / dayMs);
+  const diff = daysBetween(start, iso);
   return diff >= 0 && diff < daysShown ? 0 : Math.floor(diff / 7);
 }
 
@@ -62,11 +68,11 @@ export function buildDays(todayIso: IsoDate, weekOffset: number): readonly Calen
   const start = visibleRange(todayIso, weekOffset).from;
   return Array.from({ length: daysShown }, (_, index) => {
     const iso = addDays(start, index);
-    const date = toUtc(iso);
+    const { day, month } = toPlainDate(iso);
     return {
       iso,
-      dayOfMonth: date.getUTCDate(),
-      month: monthNames[date.getUTCMonth()] ?? '',
+      dayOfMonth: day,
+      month: monthNames[month - 1] ?? '',
       isPast: iso < todayIso,
       isToday: iso === todayIso,
     };
@@ -77,14 +83,14 @@ export function rangeTitle(days: readonly CalendarDay[]): string {
   const first = days[0];
   const last = days.at(-1);
   if (first === undefined || last === undefined) return '';
-  const year = toUtc(last.iso).getUTCFullYear();
+  const { year } = toPlainDate(last.iso);
   return `${first.dayOfMonth} ${first.month} – ${last.dayOfMonth} ${last.month} ${year}`;
 }
 
 /** "Mon, 2 Nov". */
 export function formatDay(iso: IsoDate): string {
-  const date = toUtc(iso);
-  return `${weekdayNames[weekdayIndex(iso)]}, ${date.getUTCDate()} ${monthNames[date.getUTCMonth()]}`;
+  const { day, month } = toPlainDate(iso);
+  return `${weekdayNames[weekdayIndex(iso)]}, ${day} ${monthNames[month - 1]}`;
 }
 
 /** "Today", "Tomorrow" or the weekday name. */

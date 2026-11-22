@@ -214,4 +214,11 @@ describe('listCalendarEvents', () => {
       'validation',
     );
   });
+
+  it('answers for the last date there is, with no day after it to name', async () => {
+    const viewer = await signUp('viewer16@example.com');
+    const lastDay = isoDateSchema.parse('9999-12-31');
+
+    expect(listCalendarEvents(viewer, lastDay, lastDay)).toEqual([]);
+  });
 });

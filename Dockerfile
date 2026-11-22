@@ -13,6 +13,8 @@ RUN npm run build
 FROM node:24-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# Stored times are UTC, and the app converts with the city's zone, never the machine's.
+ENV TZ=UTC
 # The whole app is copied, dev dependencies included: the realtime process runs through tsx.
 COPY --from=build --chown=node:node /app ./
 RUN mkdir -p /app/data && chown node:node /app/data

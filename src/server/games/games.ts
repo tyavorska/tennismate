@@ -14,6 +14,8 @@ import {
 import type { User } from '@/entities/user';
 import {
   addDays,
+  daysBetween,
+  endOfDayUtc,
   isoDateSchema,
   toWallClock,
   todayIn,
@@ -301,7 +303,7 @@ export function listCalendarEvents(
   to: IsoDate,
 ): readonly CalendarEvent[] {
   const { city } = requireProfile(user);
-  const spanDays = (Date.parse(to) - Date.parse(from)) / 86_400_000;
+  const spanDays = daysBetween(from, to);
   if (spanDays < 0 || spanDays > maxCalendarDays) {
     throw new DomainError('validation', {
       fieldErrors: { to: 'Choose a range of up to two months.' },
@@ -317,7 +319,7 @@ export function listCalendarEvents(
       user.id,
       city.id,
       zonedToUtc(from, '00:00', city.timezone).toISOString(),
-      zonedToUtc(addDays(to, 1), '00:00', city.timezone).toISOString(),
+      endOfDayUtc(to, city.timezone).toISOString(),
     );
   const tournamentRows = db
     .prepare(

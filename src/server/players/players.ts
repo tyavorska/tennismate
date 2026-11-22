@@ -10,14 +10,13 @@ import {
 } from '@/entities/player';
 import type { User } from '@/entities/user';
 import { getCurrentUser } from '../auth';
-import { distanceKm } from '@/shared/lib';
+import { daysBetween, distanceKm, todayIn, type IsoDate } from '@/shared/lib';
 import { db } from '../db';
 import { DomainError } from '../http';
 import { getProfile, requireProfile } from '../profiles';
 import { fitPercent } from './matching';
 
 const newPlayerDays = 14;
-const dayMs = 86_400_000;
 
 const listingRowSchema = z.object({
   id: z.string(),
@@ -53,10 +52,11 @@ function parseJsonColumn(text: string): z.core.util.JSONType {
 function toListing(
   row: z.infer<typeof listingRowSchema>,
   viewer: Readonly<{ rating: number; latitude: number; longitude: number }>,
-  now: Date,
+  today: IsoDate,
+  timeZone: string,
 ): PlayerListing {
   const km = distanceKm(viewer, row);
-  const joinedMs = new Date(row.created_at).getTime();
+  const joinedDay = todayIn(new Date(row.created_at), timeZone);
   return playerListingSchema.parse({
     id: row.id,
     name: row.name,
@@ -70,7 +70,7 @@ function toListing(
     times: timesSchema.parse(parseJsonColumn(row.times)),
     freeTonight: row.free_tonight === 1,
     online: false,
-    isNew: now.getTime() - joinedMs < newPlayerDays * dayMs,
+    isNew: daysBetween(joinedDay, today) < newPlayerDays,
     wantsDoublesPartner: row.wants_doubles_partner === 1,
   });
 }
@@ -102,7 +102,7 @@ export function listPlayers(user: User, now: Date = new Date()): readonly Player
   return z
     .array(listingRowSchema)
     .parse(rows)
-    .map((row) => toListing(row, viewer, now));
+    .map((row) => toListing(row, viewer, todayIn(now, city.timezone), city.timezone));
 }
 
 /** Saved players in the viewer's city. Those in another city stay saved but are not shown. */

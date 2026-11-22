@@ -11,10 +11,15 @@ describe('safeReturnTo', () => {
     expect(safeReturnTo(undefined)).toBe('/players');
   });
 
-  it.each(['https://evil.example', '//evil.example', '/\\evil.example', 'home'])(
-    'rejects %s, which could leave the site',
-    (value) => {
-      expect(safeReturnTo(value)).toBe('/players');
-    },
-  );
+  it.each([
+    'https://evil.example',
+    '//evil.example',
+    '/\\evil.example',
+    '/\t/evil.example',
+    '/\n/evil.example',
+    '/\t\\evil.example',
+    'home',
+  ])('rejects %s, which could leave the site', (value) => {
+    expect(safeReturnTo(value)).toBe('/players');
+  });
 });

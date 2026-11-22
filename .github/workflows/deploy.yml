@@ -1,8 +1,7 @@
 name: Deploy
 
+# Paused: runs only from the Actions tab (Run workflow) until the server and secrets exist.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

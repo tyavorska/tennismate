@@ -1,5 +1,6 @@
 export {
   credentialsSchema,
+  deleteAccountRequestSchema,
   signInCredentialsSchema,
   emailSchema,
   passwordSchema,
@@ -7,4 +8,4 @@ export {
   userIdSchema,
   userSchema,
 } from './model/user';
-export type { Credentials, SignUpRequest, User, UserId } from './model/user';
+export type { Credentials, DeleteAccountRequest, SignUpRequest, User, UserId } from './model/user';

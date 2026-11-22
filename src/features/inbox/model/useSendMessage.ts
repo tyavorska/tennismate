@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import {
   applyMessageNew,
   conversationEvents,
+  conversationQueries,
   conversationMutationKeys,
   type MessageNewEvent,
   type SendMessageRequest,
@@ -18,5 +19,11 @@ export function useSendMessage(): UseMutationResult<MessageNewEvent, ApiError, S
     mutationKey: conversationMutationKeys.send,
     mutationFn: (request) => emitWithAck(socket, conversationEvents.send, request),
     onSuccess: (event) => applyMessageNew(queryClient, event),
+    // A refused send can mean the other account was just deleted, so show it as deleted at once.
+    onError: (error) => {
+      if (error.kind === 'conflict') {
+        void queryClient.invalidateQueries({ queryKey: conversationQueries.all().queryKey });
+      }
+    },
   });
 }

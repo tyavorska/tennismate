@@ -7,6 +7,7 @@ import { courtElementsPerCity } from './004_court_elements_per_city';
 import { conversations } from './005_conversations';
 import { messageInvites } from './006_message_invites';
 import { gameInvites } from './007_game_invites';
+import { deletedUsers } from './008_deleted_users';
 import type { Migration } from './migration';
 
 export const migrations: readonly Migration[] = [
@@ -17,6 +18,7 @@ export const migrations: readonly Migration[] = [
   conversations,
   messageInvites,
   gameInvites,
+  deletedUsers,
 ];
 
 export type { Migration } from './migration';

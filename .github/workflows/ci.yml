@@ -1,8 +1,10 @@
 name: CI
 
-# Runs on every pull request. deploy.yml calls it before it deploys, so it has no push trigger.
+# Runs on every pull request and on every push to main. deploy.yml also calls it before it deploys.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_call:
 
 concurrency:

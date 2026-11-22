@@ -8,6 +8,7 @@ import { db } from '../db';
 import { deleteGame, joinGame, leaveGame, listCalendarEvents, listOpenGames } from '../games';
 import { DomainError } from '../http';
 import { addCity } from '../testing/cities';
+import { deleteAccount } from '../auth';
 import { createPlayer, krakowId } from '../testing/players';
 import {
   listConversations,
@@ -465,5 +466,79 @@ describe('listPartnerIds', () => {
 
     expect(listPartnerIds(ana.id)).toEqual([ben.id]);
     expect(listPartnerIds(ben.id)).toEqual([ana.id]);
+  });
+});
+
+describe('a deleted account', () => {
+  async function chatWithDeletedBen(): Promise<{ ana: User; ben: User }> {
+    const { ana, ben } = await pair();
+    send(ana, ben, 'Saturday at 10?', 0);
+    send(ben, ana, 'Sure', 1);
+    await deleteAccount(ben, 'serve-and-volley', at(10));
+    return { ana, ben };
+  }
+
+  it('keeps the conversation and its history, shown as a deleted player', async () => {
+    const { ana } = await chatWithDeletedBen();
+
+    const [conversation] = listConversations(ana, at(20));
+
+    expect(conversation?.partner).toMatchObject({
+      name: 'Deleted player',
+      subtitle: 'Account deleted',
+      isDeleted: true,
+    });
+    expect(conversation?.lastMessage.text).toBe('Sure');
+    const thread = listMessages(ana, conversation?.id ?? '', {}, at(20));
+    expect(thread.map((message) => message.text)).toEqual(['Saturday at 10?', 'Sure']);
+  });
+
+  it('shows no email or profile of the deleted player', async () => {
+    const { ana } = await chatWithDeletedBen();
+
+    expect(JSON.stringify(listConversations(ana, at(20)))).not.toMatch(/deleted\.invalid|@/);
+  });
+
+  it('refuses a new message to the deleted player', async () => {
+    const { ana, ben } = await chatWithDeletedBen();
+
+    expect(kindOf(() => send(ana, ben, 'Are you there?', 30))).toBe('conflict');
+    expect(listMessages(ana, listConversations(ana, at(20))[0]?.id ?? '', {}, at(30))).toHaveLength(
+      2,
+    );
+  });
+
+  it('cancels an open invite that involved the deleted player', async () => {
+    const { ana, ben } = await pair();
+    const day = '2026-11-12';
+    const court = z
+      .object({ name: z.string() })
+      .parse(
+        db
+          .prepare('SELECT name FROM courts WHERE city_id = ? AND removed_at IS NULL LIMIT 1')
+          .get(krakowId()),
+      ).name;
+    const sent = sendMessage(
+      ana,
+      {
+        recipientId: ben.id,
+        clientMessageId: randomUUID(),
+        text: 'Play?',
+        invite: { court, date: day, time: '10:00' },
+      },
+      at(0),
+    );
+
+    await deleteAccount(ben, 'serve-and-volley', at(5));
+
+    const [conversation] = listConversations(ana, at(6));
+    expect(sent.forAuthor.message.invite?.status).toBe('pending');
+    expect(conversation?.lastMessage.invite?.status).toBe('cancelled');
+  });
+
+  it('leaves the other player unable to be reached by presence', async () => {
+    const { ana, ben } = await chatWithDeletedBen();
+
+    expect(listPartnerIds(ana.id)).not.toContain(ben.id);
   });
 });

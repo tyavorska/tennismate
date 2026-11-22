@@ -1,30 +1,95 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { Button } from '@/shared/ui';
+import { Form } from 'react-aria-components';
+import { useForm } from 'react-hook-form';
+import { applyFieldErrors } from '@/shared/lib';
+import { Button, FormAlert, FormTextField, Modal } from '@/shared/ui';
+import {
+  deleteAccountDefaults,
+  deleteAccountSchema,
+  type DeleteAccountInput,
+} from '../model/deleteAccountSchema';
+import { useDeleteAccount } from '../model/useDeleteAccount';
 import styles from './DeleteAccountButton.module.css';
 
-type Step = 'idle' | 'confirm' | 'unavailable';
-
-const labels = {
-  idle: 'Delete account',
-  confirm: 'Press again to delete your account',
-  unavailable: 'Delete account',
-} as const satisfies Record<Step, string>;
-
-const nextStep = { idle: 'confirm', confirm: 'unavailable', unavailable: 'unavailable' } as const;
+const fields = ['password'] as const;
 
 export function DeleteAccountButton() {
-  const [step, setStep] = useState<Step>('idle');
+  const [isOpen, setIsOpen] = useState(false);
+  const mutation = useDeleteAccount();
+  const { control, handleSubmit, setError, reset } = useForm<DeleteAccountInput>({
+    resolver: zodResolver(deleteAccountSchema),
+    defaultValues: deleteAccountDefaults,
+    mode: 'onTouched',
+  });
+
+  function onOpenChange(open: boolean): void {
+    // Closing while the request runs would hide the outcome of an irreversible action.
+    if (mutation.isPending) return;
+    setIsOpen(open);
+    if (!open) {
+      reset(deleteAccountDefaults);
+      mutation.reset();
+    }
+  }
+
+  function onSubmit(values: DeleteAccountInput): void {
+    if (mutation.isPending) return;
+    mutation.mutate(values, {
+      onError: (error) => applyFieldErrors(error.fieldErrors, fields, setError),
+    });
+  }
+
+  const formError =
+    mutation.error !== null && mutation.error.kind !== 'validation' ? mutation.error : undefined;
 
   return (
-    <div className={styles.root}>
-      <Button variant="outline" className={styles.danger} onPress={() => setStep(nextStep[step])}>
-        {labels[step]}
+    <>
+      <Button variant="outline" className={styles.danger} onPress={() => setIsOpen(true)}>
+        Delete account
       </Button>
-      <p className={styles.status} role="status">
-        {step === 'unavailable' ? 'Deleting an account is not available yet.' : ''}
-      </p>
-    </div>
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        eyebrow="Account"
+        title="Delete your account?"
+        size="narrow"
+      >
+        <Form className={styles.form} onSubmit={handleSubmit(onSubmit)} validationBehavior="aria">
+          <p className={styles.warning}>
+            This permanently removes your profile, saved players, games you host and your place in
+            other games. Your conversations stay for the other players, who will see a deleted
+            account and cannot message you. It cannot be undone.
+          </p>
+          <FormTextField
+            control={control}
+            name="password"
+            type="password"
+            label="Confirm with your password"
+            autoComplete="current-password"
+          />
+          {formError !== undefined && <FormAlert>{formError.message}</FormAlert>}
+          <div className={styles.actions}>
+            <Button
+              variant="outline"
+              isDisabled={mutation.isPending}
+              onPress={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="outline"
+              className={styles.danger}
+              isPending={mutation.isPending}
+            >
+              {mutation.isPending ? 'Deleting…' : 'Delete my account'}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+    </>
   );
 }

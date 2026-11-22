@@ -128,11 +128,7 @@ The app is open in several cities. A player only ever sees, and can only act on,
 
 ## Time
 
-- Store instants as UTC ISO strings (`starts_at`). Store plain dates as `YYYY-MM-DD`.
-- Convert with `zonedToUtc`, `toWallClock`, `todayIn` and `nextWeekday` from `@/shared/lib`. Every
-  call takes an IANA time zone, which is the **city's** (`viewer.city.timezone`, from
-  `cities.timezone`). They follow daylight saving. Never use the server's local time and never
-  hard-code a zone outside seed and test data.
+- Storage, time zones, the helpers in `@/shared/lib` and day counting: `.claude/rules/time.md`.
 - The finder's `Today / Tomorrow / Sat / Sun` is a display of a real date, not data. Only games in
   the next 7 days with one of those names appear in the finder. The calendar shows every date.
 
